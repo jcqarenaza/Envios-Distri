@@ -1,0 +1,2005 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>DistriLogis V4 — Gestión de Envíos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap"/>
+<style>
+:root{
+  --blue:#1a1f36;--blue-lt:#e8eaf6;--blue-md:#5c6bc0;
+  --accent:#f59e0b;--accent-dk:#d97706;
+  --ok:#16a34a;--ok-lt:#dcfce7;
+  --warn:#d97706;--warn-lt:#fef3c7;
+  --alert:#dc2626;--alert-lt:#fee2e2;
+  --purple:#7c3aed;--purple-lt:#ede9fe;
+  --text:#0f172a;--text2:#475569;--text3:#94a3b8;
+  --surface:#ffffff;--surface2:#f4f6fb;--border:#e2e8f0;
+  --radius:12px;--shadow:0 1px 4px rgba(0,0,0,.1),0 1px 2px rgba(0,0,0,.06);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:#f0f2f8;color:var(--text);font-size:.875rem;line-height:1.5}
+/* LAYOUT */
+.app{display:flex;height:100vh;overflow:hidden}
+.sidebar{width:220px;min-width:220px;background:#1a1f36;display:flex;flex-direction:column;padding:0;overflow-y:auto}
+.sidebar-logo{padding:20px 16px 12px;border-bottom:1px solid rgba(255,255,255,.1)}
+.logo-title{color:#f59e0b;font-size:1.1rem;font-weight:800;letter-spacing:-.3px}
+.logo-sub{color:rgba(255,255,255,.5);font-size:.68rem;margin-top:2px}
+.sidebar-user{padding:12px 16px;border-bottom:1px solid rgba(255,255,255,.1)}
+.user-name{color:#fff;font-size:.78rem;font-weight:700}
+.user-role{color:rgba(255,255,255,.5);font-size:.68rem;margin-top:1px}
+.sidebar-nav{flex:1;padding:8px 0}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 16px;color:rgba(255,255,255,.65);font-size:.78rem;font-weight:500;cursor:pointer;transition:all .15s;border-left:3px solid transparent;text-decoration:none}
+.nav-item:hover{background:rgba(255,255,255,.07);color:#fff}
+.nav-item.active{background:rgba(245,158,11,.15);color:#fff;border-left-color:#f59e0b;font-weight:700}
+.nav-badge{margin-left:auto;background:var(--alert);color:#fff;font-size:.65rem;font-weight:700;padding:2px 6px;border-radius:99px;min-width:18px;text-align:center}
+.sidebar-footer{padding:12px}
+#sync-badge{display:none;margin:0 0 6px;border-radius:8px;overflow:hidden;border:1px solid rgba(239,68,68,.35)}
+#sync-badge-txt{cursor:pointer;padding:7px 10px;background:rgba(239,68,68,.12);color:#fca5a5;font-size:.71rem;font-weight:600;text-align:center}
+#sync-diag{cursor:pointer;padding:5px 10px;background:rgba(239,68,68,.06);color:#fca5a5;font-size:.67rem;text-align:center;border-top:1px solid rgba(239,68,68,.15)}
+.manual-btn{width:100%;display:flex;align-items:center;gap:8px;padding:9px 12px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:8px;color:rgba(255,255,255,.7);font-size:.75rem;font-weight:600;cursor:pointer;margin-bottom:6px;font-family:inherit;transition:all .15s}
+.manual-btn:hover{background:rgba(255,255,255,.14);color:#fff}
+.logout-btn{width:100%;display:flex;align-items:center;justify-content:center;gap:6px;padding:8px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;color:rgba(255,255,255,.5);font-size:.73rem;cursor:pointer;font-family:inherit;transition:all .15s}
+.logout-btn:hover{background:rgba(255,255,255,.1);color:rgba(255,255,255,.8)}
+.main{flex:1;overflow-y:auto;padding:24px}
+/* LOGIN */
+#login-screen{position:fixed;inset:0;background:linear-gradient(135deg,#0f172a 0%,#1e3a5f 60%,#1e3a5f 100%);display:flex;align-items:center;justify-content:center;z-index:1000}
+.login-box{background:#fff;border-radius:20px;padding:40px 36px;width:360px;box-shadow:0 25px 50px rgba(0,0,0,.4)}
+@keyframes shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-6px)}40%,80%{transform:translateX(6px)}}
+.login-logo{text-align:center;margin-bottom:28px}
+.login-logo-icon{font-size:2.5rem;margin-bottom:8px}
+.login-logo-title{font-size:1.4rem;font-weight:800;color:#1a1f36;letter-spacing:-.5px}
+.login-logo-sub{font-size:.75rem;color:var(--text3);margin-top:3px}
+.lf{margin-bottom:16px}
+.lf label{display:block;font-size:.75rem;font-weight:700;color:var(--text2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px}
+.lf select,.lf input{width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;font-size:.9rem;font-family:inherit;outline:none;transition:border .15s;background:var(--surface)}
+.lf select:focus,.lf input:focus{border-color:var(--blue-md)}
+.login-btn{width:100%;padding:12px;background:#f59e0b;color:#fff;border:none;border-radius:10px;font-size:.9rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s;margin-top:8px}
+.login-btn:hover{background:#d97706}
+.login-error{color:var(--alert);font-size:.78rem;margin-top:10px;text-align:center;min-height:20px;line-height:1.5}
+/* VIEWS */
+.view{display:none}.view.active{display:block}
+/* PAGE HEADER */
+.ph{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;gap:12px;flex-wrap:wrap}
+.ph-left{}
+.pt{font-size:1.4rem;font-weight:800;color:#1a1f36;letter-spacing:-.4px}
+.ps{font-size:.8rem;color:var(--text3);margin-top:2px}
+/* CARDS */
+.card{background:var(--surface);border-radius:var(--radius);border:1px solid var(--border);padding:18px;box-shadow:var(--shadow)}
+/* STAT GRID */
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:20px}
+.stat{padding:16px;border-radius:var(--radius);border:1px solid var(--border)}
+.stat.blue{background:var(--blue-lt);border-color:#bfdbfe}.stat.ok{background:var(--ok-lt);border-color:#bbf7d0}.stat.warn{background:var(--warn-lt);border-color:#fde68a}.stat.alert{background:var(--alert-lt);border-color:#fecaca}
+.sl{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);margin-bottom:4px}
+.sv{font-size:1.8rem;font-weight:800;line-height:1;color:#1a1f36}
+.stat.ok .sv{color:var(--ok)}.stat.warn .sv{color:var(--warn)}.stat.alert .sv{color:var(--alert)}
+.sd{font-size:.7rem;color:var(--text3);margin-top:3px}
+/* ALARM BANNERS */
+.ab{display:flex;gap:12px;padding:12px 16px;border-radius:10px;margin-bottom:10px;align-items:flex-start}
+.ab.alert{background:var(--alert-lt);border:1px solid #fca5a5}.ab.warn{background:var(--warn-lt);border:1px solid #fde68a}
+.ai{font-size:1.2rem;padding-top:1px}
+.at{font-weight:700;font-size:.82rem;color:var(--text)}
+.ad{font-size:.75rem;color:var(--text2);margin-top:2px}
+/* TABLES */
+.tw{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:.78rem}
+thead th{padding:9px 12px;text-align:left;font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);border-bottom:2px solid var(--border);white-space:nowrap;background:var(--surface2)}
+tbody td{padding:9px 12px;border-bottom:1px solid var(--border);vertical-align:middle}
+tbody tr:hover{background:var(--surface2)}
+tbody tr:last-child td{border-bottom:none}
+tr.row-alert{background:rgba(220,38,38,.04)}
+tr.row-warn{background:rgba(217,119,6,.04)}
+/* CHIPS */
+.chip{display:inline-block;padding:2px 8px;border-radius:99px;font-size:.7rem;font-weight:700;background:#e8eaf6;color:#3949ab;white-space:nowrap}
+.mono{font-family:'JetBrains Mono',monospace}
+/* BADGES */
+.badge,.badge-ok,.badge-blue,.badge-warn,.badge-alert,.badge-purple{display:inline-block;padding:2px 8px;border-radius:99px;font-size:.7rem;font-weight:700}
+.badge-ok{background:var(--ok-lt);color:var(--ok)}.badge-blue{background:#e8eaf6;color:#3949ab}.badge-warn{background:var(--warn-lt);color:var(--warn)}.badge-alert{background:var(--alert-lt);color:var(--alert)}.badge-purple{background:var(--purple-lt);color:var(--purple)}
+/* STATUS BADGES */
+.sb{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:99px;font-size:.7rem;font-weight:700;white-space:nowrap}
+.sb.ok{background:var(--ok-lt);color:var(--ok)}.sb.warn{background:var(--warn-lt);color:var(--warn)}.sb.alert{background:var(--alert-lt);color:var(--alert)}
+/* PROGRESS BAR */
+.prog{height:6px;border-radius:99px;background:var(--border);overflow:hidden;min-width:60px}
+.prog-bar{height:100%;border-radius:99px;transition:width .3s}
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:5px;padding:7px 14px;border-radius:8px;font-size:.76rem;font-weight:700;cursor:pointer;border:none;font-family:inherit;transition:all .15s;white-space:nowrap}
+.bs{background:#f59e0b;color:#fff}.bs:hover{background:#d97706}
+.bg{background:var(--surface2);color:var(--text2);border:1px solid var(--border)}.bg:hover{background:var(--border)}
+.bsm{padding:5px 10px;font-size:.72rem}
+/* FORMS */
+.fg{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.fgr{display:flex;flex-direction:column;gap:4px}
+.fgr label{font-size:.72rem;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px}
+.fgr label .req{color:var(--alert)}
+.fgr input,.fgr select,.fgr textarea{padding:9px 11px;border:1.5px solid var(--border);border-radius:8px;font-size:.85rem;font-family:inherit;outline:none;transition:border .15s;background:var(--surface)}
+.fgr input:focus,.fgr select:focus,.fgr textarea:focus{border-color:var(--blue-md)}
+.fgr input:disabled,.fgr select:disabled{background:var(--surface2);color:var(--text3)}
+/* TABS */
+.tabs{display:flex;gap:4px;margin-bottom:16px;flex-wrap:wrap}
+.tab{padding:7px 14px;border-radius:8px;font-size:.76rem;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--text3);transition:all .15s}
+.tab.active{background:var(--blue);color:#fff;border-color:var(--blue)}
+/* ENV SECTIONS */
+.env-section{margin-bottom:18px}
+.env-sec-hd{display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--surface2);border:1px solid var(--border);border-bottom:none;border-radius:var(--radius) var(--radius) 0 0}
+.env-sec-icon{font-size:1rem}
+.env-sec-title{font-size:.82rem;font-weight:700;color:var(--text)}
+.env-sec-badge{font-size:.7rem;font-weight:700;padding:2px 8px;border-radius:99px}
+.env-sec-badge.ok{background:var(--ok-lt);color:var(--ok)}.env-sec-badge.warn{background:var(--warn-lt);color:var(--warn)}.env-sec-badge.alert{background:var(--alert-lt);color:var(--alert)}
+/* EMPTY */
+.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;gap:8px}
+.empty-icon{font-size:2rem}
+.empty-text{font-size:.82rem;color:var(--text3);font-weight:500}
+/* TOAST */
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#0f172a;color:#fff;padding:10px 20px;border-radius:10px;font-size:.82rem;font-family:inherit;z-index:9999;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap}
+#toast.show{opacity:1}
+/* MODAL */
+.mo{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:200;backdrop-filter:blur(2px)}
+.mo.open{display:flex}
+.modal{background:#fff;border-radius:16px;padding:24px;width:460px;max-width:95vw;box-shadow:0 20px 40px rgba(0,0,0,.2)}
+.mh{font-size:1rem;font-weight:800;color:var(--blue);margin-bottom:16px}
+.mf{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}
+/* CONFIRM MODAL */
+#mo-confirm .modal{width:360px}
+.confirm-title{font-size:.95rem;font-weight:800;color:var(--text);margin-bottom:8px}
+.confirm-msg{font-size:.82rem;color:var(--text2);line-height:1.5}
+/* REMITO EDIT */
+.remito-edit{border:none;background:transparent;font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--blue-md);font-weight:600;cursor:text;width:100%;padding:2px 4px;border-radius:4px;transition:background .15s}
+.remito-edit:hover,.remito-edit:focus{background:var(--blue-lt);outline:none}
+/* ─── PROMEDIOS DE RUTA ─── */
+.avg-section{margin-bottom:20px}
+.avg-section-title{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);margin-bottom:10px}
+.avg-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px}
+.avg-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.avg-card-head{padding:10px 14px;font-size:.72rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;background:var(--surface2);border-bottom:1px solid var(--border)}
+.avg-table{width:100%;border-collapse:collapse;font-size:.76rem}
+.avg-table th{padding:7px 12px;text-align:left;font-size:.66rem;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--text3);border-bottom:1px solid var(--border);background:var(--surface2)}
+.avg-table td{padding:7px 12px;border-bottom:1px solid var(--border)}
+.avg-table tr:last-child td{border-bottom:none}
+.avg-route{display:flex;align-items:center;gap:4px}
+.avg-arrow{color:var(--text3);font-size:.7rem}
+.avg-n{font-size:.65rem;color:var(--text3);margin-left:3px}
+.avg-chip{display:inline-block;padding:1px 6px;border-radius:6px;font-size:.7rem;font-weight:700}
+/* ─── GRÁFICOS TORTA (DASHBOARD) ─── */
+.charts-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:20px}
+.pie-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;text-align:center}
+.pie-title{font-size:.7rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px}
+/* ─── SECCIONES DE DEPÓSITO ─── */
+.dsh{display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap}
+.dn{font-size:.82rem;font-weight:700;color:var(--text)}
+.badge{display:inline-block;padding:2px 8px;border-radius:99px;font-size:.7rem;font-weight:700}
+.bbl{background:var(--blue-lt);color:var(--blue)}.bw{background:var(--warn-lt);color:var(--warn)}.bal{background:var(--alert-lt);color:var(--alert)}
+/* ─── GESTIÓN DE TRANSPORTES ─── */
+.tra-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-top:14px}
+.tra-depot-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px}
+.tra-depot-title{font-size:.75rem;font-weight:700;color:var(--blue);margin-bottom:10px;text-transform:uppercase;letter-spacing:.4px}
+.tra-check{display:flex;align-items:center;gap:8px;padding:5px 0;font-size:.78rem;color:var(--text)}
+.tra-check input{cursor:pointer}
+/* ─── MODAL MANUAL DE USUARIO ─── */
+#mo-manual{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;z-index:300;backdrop-filter:blur(2px)}
+#mo-manual.open{display:flex}
+.manual-modal{background:#fff;border-radius:16px;width:760px;max-width:96vw;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 24px 48px rgba(0,0,0,.3)}
+.manual-header{display:flex;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:1px solid var(--border)}
+.manual-header-title{font-size:.95rem;font-weight:800;color:var(--blue)}
+.manual-header-sub{font-size:.7rem;color:var(--text3);margin-top:2px}
+.manual-close{background:none;border:none;cursor:pointer;font-size:.8rem;color:var(--text3);padding:6px 10px;border-radius:6px;font-family:inherit}
+.manual-close:hover{background:var(--surface2)}
+.manual-tabs{display:flex;gap:2px;padding:10px 16px;border-bottom:1px solid var(--border);overflow-x:auto}
+.mtab{font-family:inherit;font-size:.78rem;font-weight:600;padding:8px 14px;border:none;background:transparent;color:var(--text3);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s;white-space:nowrap;border-radius:6px 6px 0 0}
+.mtab:hover{color:var(--text);background:var(--surface2)}
+.mtab.active{color:var(--blue);border-bottom-color:var(--blue);font-weight:700}
+.manual-body{padding:20px 24px;overflow-y:auto;flex:1}
+.manual-body h2{font-size:1.1rem;font-weight:800;color:var(--blue);margin:0 0 12px}
+.manual-body h3{font-size:.85rem;font-weight:700;color:var(--text);margin:18px 0 8px;padding-bottom:4px;border-bottom:1px solid var(--border)}
+.manual-body p{font-size:.82rem;color:var(--text2);line-height:1.6;margin-bottom:8px}
+.manual-body ul{padding-left:18px;margin-bottom:8px}
+.manual-body li{font-size:.82rem;color:var(--text2);line-height:1.7}
+.manual-body table{font-size:.78rem;margin-bottom:12px;width:100%}
+.manual-body table th{background:var(--surface2);padding:7px 10px;text-align:left;font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--text3);border-bottom:2px solid var(--border)}
+.manual-body table td{padding:7px 10px;border-bottom:1px solid var(--border);vertical-align:top}
+.manual-body code{background:var(--surface2);padding:1px 6px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:.8em;color:var(--blue)}
+.manual-body .tip{display:flex;gap:8px;padding:10px 14px;border-radius:8px;margin:10px 0;font-size:.79rem;line-height:1.5}
+.tip-info{background:#eff6ff;border:1px solid #bfdbfe;color:#1e40af}
+.tip-warn{background:var(--warn-lt);border:1px solid #fde68a;color:#92400e}
+.tip-purple{background:var(--purple-lt);border:1px solid #ddd6fe;color:#5b21b6}
+/* ─── NOTAS EN TABLAS ─── */
+.nota-cell{font-size:.72rem;color:var(--text2);max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nota-cell.recv{color:var(--ok);font-style:italic}
+/* ─── AUTO-REFRESH ─── */
+#refresh-indicator{display:none;align-items:center;gap:6px;padding:4px 10px;border-radius:6px;background:rgba(255,255,255,.08);margin-bottom:6px;font-size:.7rem;color:rgba(255,255,255,.5)}
+#refresh-indicator.active{display:flex}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spin{display:inline-block;animation:spin .8s linear infinite}
+/* ─── NOTIFICACIONES ─── */
+.notif{position:fixed;top:20px;right:20px;z-index:9998;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.notif-item{display:flex;align-items:flex-start;gap:10px;padding:12px 16px;border-radius:10px;background:#0f172a;color:#fff;font-size:.8rem;box-shadow:0 4px 16px rgba(0,0,0,.3);pointer-events:all;max-width:300px;animation:slideIn .3s ease}
+.notif-item.alert{background:#7f1d1d;border-left:3px solid #ef4444}
+.notif-item.warn{background:#78350f;border-left:3px solid #f59e0b}
+.notif-item.info{background:#1e3a5f;border-left:3px solid #3b82f6}
+@keyframes slideIn{from{transform:translateX(120%);opacity:0}to{transform:translateX(0);opacity:1}}
+@keyframes slideOut{to{transform:translateX(120%);opacity:0}}
+/* ─── REPORTE ─── */
+#view-reporte .rpt-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-bottom:20px}
+.rpt-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.rpt-card-head{padding:10px 14px;font-size:.72rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;background:var(--surface2);border-bottom:1px solid var(--border)}
+.rpt-table{width:100%;border-collapse:collapse;font-size:.76rem}
+.rpt-table th{padding:7px 12px;text-align:left;font-size:.66rem;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--text3);border-bottom:1px solid var(--border);background:var(--surface2)}
+.rpt-table td{padding:7px 12px;border-bottom:1px solid var(--border)}
+.rpt-table tr:last-child td{border-bottom:none}
+.rpt-period{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
+.rpt-period select,.rpt-period input{padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:.8rem;font-family:inherit;outline:none;background:var(--surface)}
+.rpt-period select:focus,.rpt-period input:focus{border-color:var(--blue-md)}
+/* ─── RESPONSIVE ─── */
+@media(max-width:768px){.sidebar{display:none}.main{padding:14px}.fg{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">
+      <div class="login-logo-icon">🚚</div>
+      <div class="login-logo-title">DistriLogis V4</div>
+      <div class="login-logo-sub">Sistema de gestión de envíos</div>
+    </div>
+    <div class="lf">
+      <label>Usuario</label>
+      <select id="login-user">
+        <option value="">— Seleccioná usuario —</option>
+        <option value="administrador">Administrador</option>
+        <option value="pico">Pico</option>
+        <option value="mdp">MDP</option>
+        <option value="bsas">Bs As</option>
+        <option value="rosario">Rosario</option>
+        <option value="telev">Telev</option>
+      </select>
+    </div>
+    <div class="lf">
+      <label>Contraseña</label>
+      <input type="password" id="login-pass" placeholder="Contraseña" onkeydown="if(event.key==='Enter')doLogin()"/>
+    </div>
+    <button class="login-btn" onclick="doLogin()">Ingresar →</button>
+    <div class="login-error" id="login-err"></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div class="app" id="app" style="display:none">
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-title">🚚 DistriLogis V4</div>
+      <div class="logo-sub">Gestión de envíos</div>
+    </div>
+    <div class="sidebar-user">
+      <div class="user-name" id="sb-name"></div>
+      <div class="user-role" id="sb-role"></div>
+    </div>
+    <nav class="sidebar-nav" id="sidebar-nav"></nav>
+    <div class="sidebar-footer">
+      <div id="sync-badge">
+        <div id="sync-badge-txt" onclick="flushSyncQueue(true)"></div>
+        <div id="sync-diag" onclick="testGASConnection()">🔍 Diagnosticar conexión</div>
+      </div>
+      <div id="refresh-indicator"><span class="spin">↻</span><span>Actualizando...</span></div>
+      <button class="manual-btn" onclick="openManual()"><span>📄</span><span>Manual de Usuario</span></button>
+      <button class="logout-btn" onclick="logout()">← Cerrar sesión</button>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main" id="main-content">
+
+    <!-- DASHBOARD -->
+    <div id="view-dashboard" class="view">
+      <div class="ph"><div class="ph-left"><div class="pt" id="dash-title">Dashboard</div><div class="ps" id="dash-sub"></div></div></div>
+      <div class="stat-grid" id="sg"></div>
+      <div id="alarms"></div>
+      <div id="avg-stats"></div>
+      <div id="depots"></div>
+    </div>
+
+    <!-- NUEVO ENVÍO -->
+    <div id="view-alta" class="view">
+      <div class="ph"><div class="ph-left"><div class="pt">Nuevo Envío</div><div class="ps">Registrá un nuevo despacho</div></div></div>
+      <div class="card">
+        <div class="fg">
+          <div class="fgr"><label>Origen <span class="req">*</span></label>
+            <select id="f-ori" onchange="updateDestOptions();updateTransporteSelect()">
+              <option value="">— Seleccioná —</option>
+              <option>Pico</option><option>MDP</option><option>Bs As</option><option>Rosario</option>
+            </select>
+          </div>
+          <div class="fgr"><label>Destino <span class="req">*</span></label>
+            <select id="f-dst"><option value="">— Seleccioná —</option></select>
+          </div>
+          <div class="fgr"><label>Fecha y Hora de Salida <span class="req">*</span></label>
+            <input type="datetime-local" id="f-fecha"/>
+          </div>
+          <div class="fgr"><label>N° de Remito <span class="req">*</span></label>
+            <input type="text" id="f-rem" placeholder="Ej: 0010-00012345"/>
+          </div>
+          <div class="fgr"><label>Tipo <span class="req">*</span></label>
+            <select id="f-tipo">
+              <option value="">— Seleccioná —</option>
+              <option>Compras</option><option>Web</option><option>Web + Compras</option>
+            </select>
+          </div>
+          <div class="fgr"><label>Modalidad <span class="req">*</span></label>
+            <select id="f-mod">
+              <option value="">— Seleccioná —</option>
+              <option>Cajón</option><option>Pallet</option><option>Bulto</option>
+            </select>
+          </div>
+          <div class="fgr"><label>Cantidad <span class="req">*</span></label>
+            <input type="number" id="f-cant" min="1" value="1"/>
+          </div>
+          <div class="fgr"><label>Transporte <span class="req">*</span></label>
+            <select id="f-tra"><option value="">— Seleccioná origen primero —</option></select>
+          </div>
+          <div class="fgr" style="grid-column:1/-1"><label>Observaciones</label>
+            <input type="text" id="f-obs" placeholder="Opcional"/>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:16px">
+          <button class="btn bs" onclick="altaEnvio()">✓ Registrar Envío</button>
+          <button class="btn bg" onclick="limpiar()">✕ Limpiar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- TODOS LOS ENVÍOS -->
+    <div id="view-envios" class="view">
+      <div class="ph">
+        <div class="ph-left"><div class="pt" id="env-title">Envíos</div><div class="ps" id="env-sub"></div></div>
+        <div id="env-filters" style="display:none;align-items:center;gap:8px;flex-wrap:wrap">
+          <select id="flt-desde" onchange="renderEnvios()" style="font-size:.78rem;padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text)">
+            <option value="">↗ Todos los orígenes</option>
+            <option>Pico</option><option>MDP</option><option>Bs As</option><option>Rosario</option>
+          </select>
+          <select id="flt-hacia" onchange="renderEnvios()" style="font-size:.78rem;padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text)">
+            <option value="">↘ Todos los destinos</option>
+            <option>Pico</option><option>MDP</option><option>Bs As</option><option>Rosario</option>
+          </select>
+          <button onclick="document.getElementById('flt-desde').value='';document.getElementById('flt-hacia').value='';renderEnvios()" style="font-size:.73rem;padding:6px 11px;border-radius:8px;border:1px solid var(--border);background:var(--surface);cursor:pointer;color:var(--text3)">✕</button>
+        </div>
+      </div>
+      <!-- Por recibir PRIMERO -->
+      <div class="env-section" id="sec-por-recibir">
+        <div class="env-sec-hd">
+          <span class="env-sec-icon">📥</span>
+          <span class="env-sec-title" id="sec-recv-title">Por recibir</span>
+          <span class="env-sec-badge" id="sec-recv-badge"></span>
+        </div>
+        <div class="card" style="padding:0;overflow:hidden"><div class="tw"><table>
+          <thead><tr><th>Estado</th><th>Salida</th><th>Horas</th><th>Origen</th><th>Destino</th><th>Remito</th><th>Transporte</th><th>Notas</th><th id="th-acciones3" style="width:130px"></th></tr></thead>
+          <tbody id="tb-por-recibir"></tbody>
+        </table></div></div>
+      </div>
+      <!-- En tránsito -->
+      <div class="env-section" id="sec-despachos">
+        <div class="env-sec-hd">
+          <span class="env-sec-icon">🚚</span>
+          <span class="env-sec-title" id="sec-desp-title">En tránsito</span>
+          <span class="env-sec-badge" id="sec-desp-badge"></span>
+        </div>
+        <div class="card" style="padding:0;overflow:hidden"><div class="tw"><table>
+          <thead><tr><th>Estado</th><th>Salida</th><th>Horas</th><th>Origen</th><th>Destino</th><th>Remito</th><th>Transporte</th><th>Notas</th><th id="th-acciones" style="width:130px"></th></tr></thead>
+          <tbody id="tb-despachos"></tbody>
+        </table></div></div>
+      </div>
+      <!-- Historial -->
+      <div class="env-section" id="sec-historial">
+        <div class="env-sec-hd" style="cursor:pointer" onclick="toggleHistorial()">
+          <span class="env-sec-icon">✅</span>
+          <span class="env-sec-title" id="sec-hist-title">Historial</span>
+          <span class="env-sec-badge" id="sec-hist-badge"></span>
+          <span id="hist-toggle-icon" style="margin-left:auto;font-size:.85rem;color:var(--text3)">▼</span>
+        </div>
+        <div id="hist-search-bar" style="padding:10px 14px;border-bottom:1px solid var(--border);background:var(--surface2);display:flex;gap:8px;align-items:center">
+          <input id="hist-search" type="text" placeholder="Buscar por remito, origen, destino, transporte…" oninput="renderEnvios()" style="flex:1;font-size:.8rem;padding:6px 11px;border-radius:8px;border:1px solid var(--border);background:var(--surface);font-family:inherit;outline:none"/>
+          <button onclick="document.getElementById('hist-search').value='';renderEnvios()" style="font-size:.72rem;padding:5px 10px;border-radius:7px;border:1px solid var(--border);background:var(--surface);cursor:pointer;color:var(--text3)">✕</button>
+        </div>
+        <div id="hist-body">
+          <div class="tw"><table>
+            <thead><tr><th>Salida</th><th>Llegada</th><th>Origen</th><th>Destino</th><th>Remito</th><th>Transporte</th><th>Notas envío</th><th>Notas recepción</th><th id="th-acciones2" style="width:120px"></th></tr></thead>
+            <tbody id="tb-historial"></tbody>
+          </table></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RECEPCIÓN -->
+    <div id="view-recepcion" class="view">
+      <div class="ph"><div class="ph-left"><div class="pt">Recepción</div><div class="ps">Confirmá llegada — del más antiguo al más reciente</div></div></div>
+      <div class="tabs" id="tabs-rec"></div>
+      <div id="rec-alarms"></div>
+      <div class="card" style="padding:0;overflow:hidden"><div class="tw"><table>
+        <thead><tr>
+          <th>Estado</th><th>Horas</th><th>Límite</th><th>Progreso</th>
+          <th>Fecha Salida</th><th>Origen</th><th>Destino</th>
+          <th>Remito</th><th>Tipo</th><th>Cant.</th><th>Transporte</th><th>Acción</th>
+        </tr></thead>
+        <tbody id="tb-rec"></tbody>
+      </table></div></div>
+    </div>
+
+    <!-- TIEMPOS POR RUTA -->
+    <div id="view-rutas" class="view">
+      <div class="ph"><div class="ph-left"><div class="pt">Tiempos por Ruta</div><div class="ps">Umbrales de alerta por ruta</div></div></div>
+      <div class="card" style="padding:0;overflow:hidden">
+        <div class="tw"><table>
+          <thead><tr><th>Ruta</th><th>✅ Normal (hasta)</th><th>⚠️ Demorado (hasta)</th><th>🚨 Alerta (desde)</th><th id="th-guardar-rutas"></th></tr></thead>
+          <tbody id="tb-rutas"></tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <!-- TRANSPORTES (admin) -->
+    <div id="view-transportes" class="view">
+      <div class="ph"><div class="ph-left"><div class="pt">🚛 Transportes</div><div class="ps">Gestión de empresas de transporte por depósito</div></div></div>
+      <div id="transportes-content"></div>
+    </div>
+
+    <!-- SISTEMA (admin) -->
+    <div id="view-sistema" class="view">
+      <div class="ph"><div class="ph-left"><div class="pt">⚙️ Sistema</div><div class="ps">Control de versiones y configuración</div></div></div>
+      <div id="sistema-content"></div>
+    </div>
+
+    <!-- REPORTE -->
+    <div id="view-reporte" class="view">
+      <div class="ph">
+        <div class="ph-left"><div class="pt">📈 Reporte</div><div class="ps">Resumen de envíos por período</div></div>
+        <button class="btn bs" onclick="exportarCSV()">⬇ Exportar CSV</button>
+      </div>
+      <div class="rpt-period">
+        <label style="font-size:.78rem;font-weight:600;color:var(--text2)">Período:</label>
+        <select id="rpt-periodo" onchange="renderReporte()">
+          <option value="7">Últimos 7 días</option>
+          <option value="30" selected>Últimos 30 días</option>
+          <option value="90">Últimos 90 días</option>
+          <option value="0">Todo</option>
+        </select>
+        <label style="font-size:.78rem;font-weight:600;color:var(--text2)">Estado:</label>
+        <select id="rpt-estado" onchange="renderReporte()">
+          <option value="">Todos</option>
+          <option value="recibido">Recibidos</option>
+          <option value="pendiente">Pendientes</option>
+        </select>
+      </div>
+      <div id="rpt-stats" class="stat-grid" style="margin-bottom:20px"></div>
+      <div class="rpt-grid" id="rpt-grid"></div>
+    </div>
+
+  </div><!-- /main -->
+</div><!-- /app -->
+
+<!-- MODAL RECEPCIÓN -->
+<div class="mo" id="mo-recv">
+  <div class="modal">
+    <div class="mh">✅ Confirmar Recepción</div>
+    <div class="fg" style="grid-template-columns:1fr">
+      <div class="fgr"><label>Envío</label><input type="text" id="m-info" readonly/></div>
+      <div class="fgr"><label>Fecha y Hora de Recepción</label><input type="datetime-local" id="m-llegada"/></div>
+      <div class="fgr"><label>Observaciones <span style="font-size:.68rem;color:var(--text3);font-weight:400">(opcional)</span></label><input type="text" id="m-obs-r" placeholder="Todo OK / Con daños / Faltante..."/></div>
+    </div>
+    <div class="mf">
+      <button class="btn bg" onclick="closeModal()">Cancelar</button>
+      <button class="btn bs" onclick="confirmar()">✓ Confirmar Llegada</button>
+    </div>
+  </div>
+</div>
+
+<div class="notif" id="notif-container"></div>
+<div id="toast"></div>
+
+<!-- MODAL CONFIRM -->
+<div class="mo" id="mo-confirm" style="z-index:500">
+  <div class="modal" style="width:360px">
+    <div class="confirm-title" id="mc-title"></div>
+    <div class="confirm-msg" id="mc-msg"></div>
+    <div class="mf">
+      <button class="btn bg" onclick="dlConfirmCancel()">Cancelar</button>
+      <button class="btn bs" id="mc-ok">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL MANUAL -->
+<div id="mo-manual">
+  <div class="manual-modal">
+    <div class="manual-header">
+      <div>
+        <div class="manual-header-title">📄 Manual de Usuario — DistriLogis</div>
+        <div class="manual-header-sub">Versión 4.1 · Marzo 2026</div>
+      </div>
+      <button class="manual-close" onclick="closeManual()">✕ Cerrar</button>
+    </div>
+    <div class="manual-tabs" id="manual-tabs-bar"></div>
+    <div class="manual-body" id="manual-content"></div>
+  </div>
+</div>
+
+<script>
+'use strict';
+// ═══════════════════════════════════════════
+// CONSTANTES
+// ═══════════════════════════════════════════
+const APP_VERSION = '20260404.1132'; // ← generado automáticamente por Claude al crear el archivo (YYYYMMDD.HHMM)
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbwNrWxDXyTFhtRMDkkTZl5_lN1fglUajnTuIlfpZEMknW9FPwXyzMnwcGAANaI53s0j/exec';
+const DEPOTS  = ['Pico','MDP','Bs As','Rosario'];
+const ROUTE_DEFS = [
+  {key:'bsas-pico',    label:'Bs As ↔ Pico',    o:'Bs As',   d:'Pico'},
+  {key:'bsas-mdp',     label:'Bs As ↔ MDP',     o:'Bs As',   d:'MDP'},
+  {key:'bsas-rosario', label:'Bs As ↔ Rosario',  o:'Bs As',   d:'Rosario'},
+  {key:'pico-rosario', label:'Pico ↔ Rosario',   o:'Pico',    d:'Rosario'},
+  {key:'pico-mdp',     label:'Pico ↔ MDP',       o:'Pico',    d:'MDP'},
+  {key:'mdp-rosario',  label:'MDP ↔ Rosario',    o:'MDP',     d:'Rosario'},
+];
+const DEFAULT_THRESHOLDS = {
+  'bsas-pico':24,'bsas-pico_a':48,
+  'bsas-mdp':24,'bsas-mdp_a':48,
+  'bsas-rosario':24,'bsas-rosario_a':48,
+  'pico-rosario':48,'pico-rosario_a':72,
+  'pico-mdp':72,'pico-mdp_a':96,
+  'mdp-rosario':48,'mdp-rosario_a':72,
+};
+
+// ═══════════════════════════════════════════
+// GAS — todo por GET, compatible con cualquier versión
+// ═══════════════════════════════════════════
+async function gasPost(action, extra={}){
+  const u = currentUser;
+  const url = new URL(GAS_URL);
+  url.searchParams.set('action',   action);
+  url.searchParams.set('usuario',  u.id);
+  url.searchParams.set('password', u._pass);
+  url.searchParams.set('data',     JSON.stringify(extra));
+  console.log('[GAS url]', action, 'usuario='+u.id, 'pass='+u._pass);
+  const res = await fetch(url.toString(), { method:'GET', redirect:'follow' });
+  const txt = await res.text();
+  console.log('[GAS resp]', action, txt.slice(0,300));
+  try { return JSON.parse(txt); }
+  catch(e){ return { ok:false, error:'Respuesta no JSON: '+txt.slice(0,100) }; }
+}
+
+async function gasGet(action, params={}){
+  const url = new URL(GAS_URL);
+  url.searchParams.set('action', action);
+  Object.entries(params).forEach(([k,v])=>url.searchParams.set(k,v));
+  const res = await fetch(url, { redirect:'follow' });
+  const txt = await res.text();
+  try { return JSON.parse(txt); }
+  catch(e){ return { ok:false, error:'Respuesta no JSON' }; }
+}
+
+// ═══════════════════════════════════════════
+// COLA DE SINCRONIZACIÓN
+// ═══════════════════════════════════════════
+let syncQueue = [];
+// syncQueue se carga en startApp() con la clave del usuario
+
+function saveSyncQueue(){ const u=currentUser?currentUser.id:'_'; localStorage.setItem('dl_sync_queue_'+u, JSON.stringify(syncQueue)); }
+
+function queueSync(action, extra, qid){
+  const item = { action, extra, ts:Date.now(), intentos:0 };
+  if(qid) item._qid = qid;
+  syncQueue.push(item);
+  saveSyncQueue();
+}
+
+async function flushSyncQueue(manual=false){
+  if(!syncQueue.length || !currentUser) return;
+  const pending  = [...syncQueue];
+  const failed   = [];
+  let   lastError = '';
+
+  // ✅ Procesar en paralelo con Promise.allSettled (antes era serie, N× más lento)
+  const results = await Promise.allSettled(
+    pending.map(item => gasPost(item.action, item.extra))
+  );
+
+  results.forEach((result, i) => {
+    const item = pending[i];
+    if(result.status === 'fulfilled' && result.value && result.value.ok){
+      if(manual) toast('✅ Sincronizado: ' + item.action);
+    } else {
+      lastError = result.status === 'rejected'
+        ? result.reason?.message || 'Error de red'
+        : (result.value?.error || 'Sin respuesta ok');
+      item.intentos = (item.intentos || 0) + 1;
+      if(item.intentos < 10) failed.push(item);
+    }
+  });
+
+  syncQueue = failed;
+  saveSyncQueue();
+  updSyncBadge(lastError, manual);
+}
+
+function updSyncBadge(lastError='', manual=false){
+  const badge = document.getElementById('sync-badge');
+  const txt   = document.getElementById('sync-badge-txt');
+  if(!badge) return;
+  if(syncQueue.length){
+    badge.style.display = '';
+    if(txt) txt.innerHTML = `⚠️ ${syncQueue.length} sin sincronizar${lastError?' — '+lastError.slice(0,40):''}`;
+    if(manual && lastError) toast('❌ Error: '+lastError.slice(0,80));
+  } else {
+    badge.style.display = 'none';
+    if(manual) toast('✅ Todo sincronizado con Sheets');
+  }
+}
+
+async function gasSend(action, extra={}){
+  try {
+    const res = await gasPost(action, extra);
+    console.log('[gasSend result]', action, res);
+    if(res && res.ok){ updSyncBadge(); return res; }
+    const errMsg = res?.error || 'Sin respuesta ok';
+    console.warn('[gasSend] GAS error:', errMsg);
+    toast('⚠️ ' + action + ': ' + errMsg.slice(0,60));
+    queueSync(action, extra);
+    updSyncBadge();
+    return null;
+  } catch(e){
+    console.error('[gasSend error]', action, e);
+    toast('⚠️ Red: ' + e.message.slice(0,60));
+    queueSync(action, extra);
+    updSyncBadge();
+    return null;
+  }
+}
+
+// Limpia un envío por fragmento de remito — llamar desde consola: limpiarEnvio('10179')
+window.limpiarEnvio = function(frag){
+  const qAntes = syncQueue.length;
+  syncQueue = syncQueue.filter(q => {
+    const r = q.extra && q.extra.envio ? q.extra.envio.remito : '';
+    return !r.includes(frag);
+  });
+  saveSyncQueue();
+  const eAntes = extras.length;
+  extras = extras.filter(e => !e.remito.includes(frag));
+  saveState(); rebuildEnvios(); updBadge(); updSyncBadge();
+  toast(`🗑 Borrado: cola ${qAntes-syncQueue.length}, extras ${eAntes-extras.length}`);
+};
+
+async function testGASConnection(){
+  toast('🔍 Probando conexión...');
+  try {
+    const ping = await gasGet('ping');
+    if(!ping || !ping.ok){ toast('❌ Ping fallido: '+JSON.stringify(ping).slice(0,80)); return; }
+    if(!syncQueue.length){ toast('✅ GAS OK · Cola vacía'); return; }
+    const item = syncQueue[0];
+    const res = await gasPost(item.action, item.extra);
+    if(res && res.ok){
+      toast('✅ Sincronizado OK');
+      syncQueue.shift(); saveSyncQueue(); updSyncBadge();
+    } else {
+      toast('❌ GAS error: '+(res?.error||'desconocido'));
+      console.error('[TEST GAS]', res);
+    }
+  } catch(e){
+    toast('❌ Red: '+e.message);
+    console.error('[TEST GAS]', e);
+  }
+}
+
+setInterval(()=>{ if(syncQueue.length && currentUser) flushSyncQueue(); }, 30000);
+
+// ═══════════════════════════════════════════
+// AUTO-REFRESH
+// ═══════════════════════════════════════════
+let _refreshTimer  = null;
+let _lastRefresh   = null;
+let _refreshing    = false; // ✅ guard contra solapamiento
+
+async function autoRefresh(){
+  if(!currentUser) return;
+  // ✅ Debounce: si ya hay un refresh en curso, no lanzar otro
+  if(_refreshing) return;
+  // ✅ Si la pestaña no está visible, diferir (ahorra requests innecesarios)
+  if(document.hidden) return;
+  _refreshing = true;
+  const ind = document.getElementById('refresh-indicator');
+  if(ind) ind.classList.add('active');
+  try {
+    const res = await gasGet('getEnvios');
+    if(res.ok && res.data && res.data.length > 0){
+      const prevCount = envios.filter(e=>e.estado==='pendiente').length;
+      extras  = res.data;
+      changes = {};
+      saveState();
+      rebuildEnvios();
+      updBadge();
+      checkNotifications();
+      const activeView = document.querySelector('.view.active');
+      if(activeView){
+        const vid = activeView.id.replace('view-','');
+        if(vid==='dashboard')  renderDash();
+        if(vid==='envios')     renderEnvios();
+        if(vid==='recepcion')  renderRecepcion();
+      }
+      const newPend = envios.filter(e=>e.estado==='pendiente').length;
+      if(newPend > prevCount) toast(`🔄 ${newPend - prevCount} envío${newPend-prevCount>1?'s':''} nuevo${newPend-prevCount>1?'s':''}`);
+      _lastRefresh = new Date();
+    }
+  } catch(e){ console.warn('[autoRefresh] error:', e.message); }
+  finally {
+    if(ind) ind.classList.remove('active');
+    _refreshing = false;
+  }
+}
+
+function startAutoRefresh(){
+  if(_refreshTimer) clearInterval(_refreshTimer);
+  _refreshTimer = setInterval(autoRefresh, 2 * 60 * 1000); // cada 2 minutos
+}
+function stopAutoRefresh(){
+  if(_refreshTimer){ clearInterval(_refreshTimer); _refreshTimer=null; }
+}
+
+// ═══════════════════════════════════════════
+// NOTIFICACIONES
+// ═══════════════════════════════════════════
+// Guarda el último estado conocido por envío para detectar cambios
+let _statusSnapshot = {}; // { [id]: 'ok'|'warn'|'alert' }
+let _snapshotReady  = false; // true después del primer ciclo (no notificar al login)
+
+function showNotif(msg, type='info', duration=6000){
+  const container = document.getElementById('notif-container');
+  if(!container) return;
+  const item = document.createElement('div');
+  item.className = 'notif-item ' + type;
+  item.innerHTML = '<span style="flex:1">'+msg+'</span><span style="cursor:pointer;opacity:.6;font-size:1rem" onclick="this.parentElement.remove()">✕</span>';
+  container.appendChild(item);
+  setTimeout(()=>{
+    item.style.animation='slideOut .3s ease forwards';
+    setTimeout(()=>item.remove(), 300);
+  }, duration);
+}
+
+function checkNotifications(){
+  if(!currentUser || !envios.length) return;
+  const u = currentUser, depot = u.depot;
+  const pendientes = envios.filter(e => {
+    if(e.estado !== 'pendiente') return false;
+    if(u.role === 'sucursal') return e.destino === depot;
+    return true;
+  });
+
+  pendientes.forEach(e => {
+    const {status, hrs} = calcStatusCached(e);
+    const prev = _statusSnapshot[e.id];
+    _statusSnapshot[e.id] = status;
+
+    // Solo notificar si el snapshot ya está inicializado (no al login)
+    // y si el estado empeoró: ok→warn, ok→alert, warn→alert
+    if(!_snapshotReady) return;
+    const empeoró = (prev==='ok' && (status==='warn'||status==='alert'))
+                 || (prev==='warn' && status==='alert');
+    if(!empeoró) return;
+
+    const icon  = status==='alert' ? '🚨' : '⚠️';
+    const label = status==='alert' ? 'ALERTA' : 'Demorado';
+    showNotif(icon+' <strong>'+label+'</strong> — Remito '+e.remito+'<br><span style="opacity:.7">'+e.origen+' → '+e.destino+' · '+fmtH(hrs)+'</span>', status, status==='alert'?10000:7000);
+  });
+
+  // Marcar snapshot como listo después del primer ciclo
+  if(!_snapshotReady) _snapshotReady = true;
+}
+
+// ═══════════════════════════════════════════
+// USERS
+// ═══════════════════════════════════════════
+// ⚠️  Las credenciales YA NO están en el cliente.
+// El login llama a GAS authenticate() y recibe un token de sesión.
+// El objeto USERS solo guarda metadatos de display (sin contraseñas).
+const USERS_META = {
+  administrador:{ role:'admin',    depot:null,      label:'Administrador', color:'#6366f1' },
+  pico:         { role:'sucursal', depot:'Pico',    label:'Pico',          color:'#0891b2' },
+  mdp:          { role:'sucursal', depot:'MDP',     label:'MDP',           color:'#059669' },
+  bsas:         { role:'sucursal', depot:'Bs As',   label:'Bs As',         color:'#d97706' },
+  rosario:      { role:'sucursal', depot:'Rosario', label:'Rosario',       color:'#7c3aed' },
+  telev:        { role:'readonly', depot:null,      label:'Telev',         color:'#475569' },
+};
+
+const NAV_ITEMS = {
+  admin:    [{id:'dashboard',icon:'📊',label:'Dashboard'},{id:'alta',icon:'➕',label:'Nuevo Envío'},{id:'envios',icon:'📦',label:'Todos los Envíos'},{id:'recepcion',icon:'📥',label:'Recepción'},{id:'rutas',icon:'🗺️',label:'Tiempos por Ruta'},{id:'transportes',icon:'🚛',label:'Transportes'},{id:'reporte',icon:'📈',label:'Reporte'},{id:'sistema',icon:'⚙️',label:'Sistema'}],
+  sucursal: [{id:'dashboard',icon:'📊',label:'Dashboard'},{id:'alta',icon:'➕',label:'Nuevo Envío'},{id:'envios',icon:'📦',label:'Todos los Envíos'},{id:'recepcion',icon:'📥',label:'Recepción'},{id:'rutas',icon:'🗺️',label:'Tiempos por Ruta'}],
+  readonly: [{id:'dashboard',icon:'📊',label:'Dashboard'},{id:'envios',icon:'📦',label:'Todos los Envíos'},{id:'rutas',icon:'🗺️',label:'Tiempos por Ruta'}],
+};
+
+let currentUser = null;
+
+// ═══════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════
+let extras  = [];
+let changes = {};
+let envios  = [];
+let routeThresholds = {};
+let ALL_TRANSPORTES = ['Brinatti','Cruz del Sur','Transban','Vía 2'];
+let depoTransportes = { Pico:['Brinatti','Cruz del Sur'], MDP:['Cruz del Sur','Vía 2'], 'Bs As':['Brinatti','Transban','Vía 2'], Rosario:['Brinatti','Transban'] };
+
+function loadState(){
+  const u = localStorage.getItem('dl_last_user') || '_';
+  try { extras  = JSON.parse(localStorage.getItem('dl_extras_'+u)  || '[]'); } catch(e){ extras=[]; }
+  try { changes = JSON.parse(localStorage.getItem('dl_changes_'+u) || '{}'); } catch(e){ changes={}; }
+  try {
+    const rt = JSON.parse(localStorage.getItem('dl_routes') || 'null');
+    if(rt && typeof rt === 'object' && !Array.isArray(rt)){
+      const hasNew = ROUTE_DEFS.some(d => rt[d.key]);
+      routeThresholds = hasNew ? rt : buildDefaultThresholds();
+    } else { routeThresholds = buildDefaultThresholds(); }
+  } catch(e){ routeThresholds = buildDefaultThresholds(); }
+  try { const tl = JSON.parse(localStorage.getItem('dl_tra_list')||'null'); if(tl&&tl.length){ ALL_TRANSPORTES.length=0; tl.forEach(t=>ALL_TRANSPORTES.push(t)); } } catch(e){}
+  try { const dt = JSON.parse(localStorage.getItem('dl_transportes')||'null'); if(dt) Object.assign(depoTransportes, dt); } catch(e){}
+}
+
+function buildDefaultThresholds(){
+  const d = {};
+  ROUTE_DEFS.forEach(r=>{
+    const k = r.key;
+    d[k] = [DEFAULT_THRESHOLDS[k]||48, DEFAULT_THRESHOLDS[k+'_a']||72];
+  });
+  return d;
+}
+
+function saveState(){
+  const u = currentUser ? currentUser.id : '_';
+  localStorage.setItem('dl_extras_'+u,  JSON.stringify(extras));
+  localStorage.setItem('dl_changes_'+u, JSON.stringify(changes));
+}
+
+function rebuildEnvios(){
+  // Si hay datos del Sheet (extras), usarlos directamente sin seeds
+  if(extras.length > 0){
+    envios = extras.map(e => {
+      const ch = changes[e.id];
+      return ch ? Object.assign({}, e, ch) : e;
+    }).filter(e => !e._deleted);
+  } else {
+    // Sin datos del Sheet todavía — usar seeds como fallback
+    const seed = buildSeed();
+    envios = seed.map(s => {
+      const ch = changes[s.id];
+      return ch ? Object.assign({}, s, ch) : s;
+    }).filter(s => !s._deleted);
+  }
+  // ✅ Pre-calcular status para evitar N×M llamadas a calcStatus() durante renders
+  _statusCache = {};
+  envios.forEach(e => {
+    if(e.estado === 'pendiente'){
+      _statusCache[e.id] = calcStatus(e);
+    }
+  });
+}
+
+// Cache de status — se invalida en cada rebuildEnvios()
+let _statusCache = {};
+
+// calcStatusCached: O(1) lookup para renders — usa el caché pre-calculado en rebuildEnvios()
+function calcStatusCached(e){
+  if(e.estado !== 'pendiente') return { hrs:0, status:'ok', nL:48, aL:72 };
+  return _statusCache[e.id] || calcStatus(e);
+}
+
+// ═══════════════════════════════════════════
+// LOGIN
+// ═══════════════════════════════════════════
+// ═══════════════════════════════════════════
+// LOGIN — autenticación 100% via GAS
+// ═══════════════════════════════════════════
+async function doLogin(){
+  const u   = document.getElementById('login-user').value;
+  const p   = document.getElementById('login-pass').value;
+  const err = document.getElementById('login-err');
+  const btn = document.querySelector('.login-btn');
+  if(!u){ err.textContent='Seleccioná un usuario'; return; }
+  if(!p){ err.textContent='Ingresá la contraseña';  return; }
+
+  err.textContent='';
+  btn.textContent='Verificando versión...';
+  btn.disabled=true;
+
+  // ── Paso 0: verificar que esta versión del HTML sea la vigente ─────────
+  // El GAS expone la versión mínima requerida via action=getVersion.
+  // Si el HTML es más viejo, el login se bloquea con mensaje al usuario.
+  try {
+    const vRes = await gasGet('getVersion', { v: APP_VERSION });
+    if(vRes && vRes.ok && vRes.data && vRes.data.minVersion){
+      const required = String(vRes.data.minVersion).trim();
+      const current  = String(APP_VERSION).trim();
+      if(current !== required && parseFloat(current) < parseFloat(required)){
+        err.innerHTML =
+          `<span style="font-size:1.1rem">⛔</span> ` +
+          `<strong>Versión desactualizada</strong><br>` +
+          `<span style="font-size:.75rem">Tenés la v${current} — se requiere v${required}.<br>` +
+          `Consultá al administrador para obtener el archivo actualizado.</span>`;
+        btn.textContent='Ingresar'; btn.disabled=false;
+        return;
+      }
+    }
+    // Si getVersion devuelve "acción no reconocida" (GAS viejo) dejamos pasar — no bloqueamos
+  } catch(e){
+    // Sin conexión: no podemos verificar versión, dejamos pasar con aviso
+    console.warn('[version check] sin conexión, saltando verificación');
+  }
+
+  btn.textContent='Conectando...';
+  // Si el GAS todavía no tiene el endpoint 'authenticate' (V4), caemos al
+  // fallback local que usa USERS_META + contraseña local de respaldo.
+  let authRole = null, authDepot = null, authLabel = null;
+  let gasAuthOk = false;
+
+  try {
+    const res = await gasGet('authenticate', { usuario: u, password: p });
+    if(res && res.ok && res.data && res.data.rol){
+      gasAuthOk = true;
+      authRole  = res.data.rol === 'admin' ? 'admin' : res.data.rol === 'readonly' ? 'readonly' : 'sucursal';
+      authDepot = res.data.depo || null;
+      authLabel = res.data.label || u;
+    } else if(res && !res.ok && res.error && res.error.includes('no reconocida')){
+      // GAS V4 todavía activo — fallback a validación local
+      gasAuthOk = false;
+    } else {
+      // Error real de credenciales
+      err.innerHTML = '<span style="font-size:1.1rem">🔒</span> ' + (res?.error || 'Credenciales incorrectas');
+      document.getElementById('login-pass').value='';
+      const box = document.querySelector('.login-box');
+      box.style.animation='none'; box.offsetHeight; box.style.animation='shake .4s ease';
+      btn.textContent='Ingresar'; btn.disabled=false;
+      return;
+    }
+  } catch(e){
+    gasAuthOk = false; // sin conexión — caemos a fallback local
+  }
+
+  // ── Paso 2: fallback local (GAS V4 o sin conexión) ────────────────────
+  if(!gasAuthOk){
+    const meta = USERS_META[u];
+    if(!meta){
+      err.innerHTML = '<span style="font-size:1.1rem">🔒</span> Usuario no existe';
+      btn.textContent='Ingresar'; btn.disabled=false;
+      return;
+    }
+    // Validación local de contraseña (solo mientras se usa GAS V4)
+    const LOCAL_PASS = { administrador:'tinchohack', pico:'pico', mdp:'mdp', bsas:'bsas', rosario:'rosario', telev:'telev' };
+    if(LOCAL_PASS[u] !== p){
+      err.innerHTML = '<span style="font-size:1.1rem">🔒</span> Usuario o contraseña incorrectos';
+      document.getElementById('login-pass').value='';
+      const box = document.querySelector('.login-box');
+      box.style.animation='none'; box.offsetHeight; box.style.animation='shake .4s ease';
+      btn.textContent='Ingresar'; btn.disabled=false;
+      return;
+    }
+    authRole  = meta.role;
+    authDepot = meta.depot;
+    authLabel = meta.label;
+  }
+
+  if(u) localStorage.setItem('dl_last_user', u);
+
+  const meta = USERS_META[u] || {};
+  currentUser = {
+    id:    u,
+    role:  authRole,
+    depot: authDepot,
+    label: authLabel,
+    color: meta.color || '#475569',
+    _pass: p,
+  };
+
+  // ── Paso 3: cargar datos del Sheet ────────────────────────────────────
+  // Cargar primero el estado local del usuario correcto
+  loadState();
+  try {
+    const [enviosRes, rutasRes, traRes] = await Promise.all([
+      gasGet('getEnvios'), gasGet('getRutas'), gasGet('getTransportes')
+    ]);
+    if(enviosRes.ok && enviosRes.data && enviosRes.data.length > 0){
+      extras  = enviosRes.data;
+      changes = {};
+      saveState();
+    }
+    if(rutasRes.ok && rutasRes.data){
+      const hasNew = ROUTE_DEFS.some(d=>rutasRes.data[d.key]);
+      if(hasNew){ routeThresholds = rutasRes.data; localStorage.setItem('dl_routes', JSON.stringify(routeThresholds)); }
+    }
+    if(traRes.ok && traRes.data){
+      if(traRes.data.lista)  { ALL_TRANSPORTES.length=0; traRes.data.lista.forEach(t=>ALL_TRANSPORTES.push(t)); localStorage.setItem('dl_tra_list',JSON.stringify(ALL_TRANSPORTES)); }
+      if(traRes.data.depots) { Object.assign(depoTransportes, traRes.data.depots); localStorage.setItem('dl_transportes',JSON.stringify(depoTransportes)); }
+    }
+    // ✅ Auto-registro de versión: si APP_VERSION > deployedVersion en el Sheet, actualiza.
+    // Esto ocurre automáticamente cada vez que alguien con el nuevo HTML hace login.
+    // El GAS solo acepta el update si el número es mayor al que ya tiene.
+    gasSend('registerVersion', { version: APP_VERSION }).catch(()=>{});
+    showToastLogin('✅ Conectado a Sheets');
+  } catch(e){
+    console.warn('[doLogin] error cargando datos:', e);
+    showToastLogin('⚠️ Datos locales — sin conexión a Sheets');
+  }
+
+  btn.textContent='Ingresar'; btn.disabled=false;
+  startApp();
+}
+function showToastLogin(msg){
+  const t=document.createElement('div');
+  t.textContent=msg;
+  t.style.cssText='position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#0f172a;color:#fff;padding:10px 20px;border-radius:8px;font-size:.82rem;font-family:Plus Jakarta Sans,sans-serif;z-index:9999;opacity:0;transition:opacity .3s';
+  document.body.appendChild(t);
+  setTimeout(()=>t.style.opacity='1',10);
+  setTimeout(()=>{ t.style.opacity='0'; setTimeout(()=>t.remove(),400); },2500);
+}
+
+function startApp(){
+  const u = currentUser;
+  // Cargar cola de sincronización del usuario actual
+  try { syncQueue = JSON.parse(localStorage.getItem('dl_sync_queue_'+u.id) || '[]'); } catch(e){ syncQueue=[]; }
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('app').style.display='flex';
+  document.getElementById('sb-name').textContent = u.label;
+  document.getElementById('sb-role').textContent = u.role==='admin'?'Administrador':u.role==='sucursal'?'Depósito':'Solo lectura';
+  const nav = NAV_ITEMS[u.role]||NAV_ITEMS.readonly;
+  document.getElementById('sidebar-nav').innerHTML = nav.map(item=>
+    `<div class="nav-item" id="nav-${item.id}" onclick="show('${item.id}')">${item.icon} ${item.label}${item.id==='recepcion'?'<span class="nav-badge" id="nb-recv" style="display:none">0</span>':''}</div>`
+  ).join('');
+  rebuildEnvios();
+  show('dashboard');
+  updBadge();
+  updSyncBadge();
+  setTimeout(flushSyncQueue, 2000);
+  startAutoRefresh();
+  // Inicializar snapshot de estados al login (sin notificar)
+  setTimeout(checkNotifications, 2000);
+}
+
+function logout(){
+  stopAutoRefresh();
+  currentUser=null;
+  document.getElementById('app').style.display='none';
+  document.getElementById('login-screen').style.display='flex';
+  document.getElementById('login-pass').value='';
+  document.getElementById('login-err').textContent='';
+}
+
+function show(viewId){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  const v = document.getElementById('view-'+viewId);
+  const n = document.getElementById('nav-'+viewId);
+  if(v) v.classList.add('active');
+  if(n) n.classList.add('active');
+  if(viewId==='dashboard')    renderDash();
+  if(viewId==='alta')         initAlta();
+  if(viewId==='envios')       renderEnvios();
+  if(viewId==='recepcion')    renderRecepcion();
+  if(viewId==='rutas')        renderRoutes();
+  if(viewId==='transportes')  renderTransportesView();
+  if(viewId==='sistema')      renderSistema();
+  if(viewId==='reporte')      renderReporte();
+}
+
+// ═══════════════════════════════════════════
+// HELPERS / FORMATTING
+// ═══════════════════════════════════════════
+// ─── TIMEZONE ───────────────────────────────────────────────────────────────
+// Usamos IANA 'America/Argentina/Buenos_Aires' en lugar de restar 3hs fijo.
+// Esto respeta correctamente el horario oficial sin importar DST ni dispositivo.
+const TZ = 'America/Argentina/Buenos_Aires';
+
+function nowAR(){
+  return new Date();
+}
+function nowDT(){
+  // Devuelve string 'YYYY-MM-DDTHH:mm' en hora Argentina para inputs datetime-local
+  const now = new Date();
+  const s = now.toLocaleString('sv-SE', { timeZone: TZ }); // 'YYYY-MM-DD HH:mm:ss'
+  return s.slice(0,16).replace(' ','T');
+}
+function nowMs(){
+  // ms reales — para cálculos de duración siempre usar Date() directo
+  return Date.now();
+}
+function fmtDT(s){
+  if(!s) return '—';
+  const d=new Date(s); if(isNaN(d)) return s;
+  return d.toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'2-digit'})+' '+d.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'});
+}
+function fmtH(h){
+  if(h==null||isNaN(h)) return '—';
+  if(h<24) return Math.round(h)+'h';
+  const d=Math.floor(h/24), r=Math.round(h%24);
+  return d+'d'+(r?' '+r+'h':'');
+}
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),3200);
+}
+function rCls(s){ return s==='alert'?'row-alert':s==='warn'?'row-warn':''; }
+function sBadge(s){
+  if(s==='alert') return '<span class="sb alert">🚨 Alerta</span>';
+  if(s==='warn')  return '<span class="sb warn">⚠️ Demorado</span>';
+  return '<span class="sb ok">✅ Normal</span>';
+}
+function prog(hrs,nL,aL,status){
+  const pct = aL>0?Math.min(100,Math.round(hrs/aL*100)):0;
+  const col  = status==='alert'?'var(--alert)':status==='warn'?'var(--warn)':'var(--ok)';
+  return `<div class="prog" style="min-width:60px"><div class="prog-bar" style="width:${pct}%;background:${col}"></div></div>`;
+}
+function dlConfirm(title,msg,onOk){
+  document.getElementById('mc-title').textContent=title;
+  document.getElementById('mc-msg').textContent=msg;
+  document.getElementById('mc-ok').onclick=()=>{ document.getElementById('mo-confirm').classList.remove('open'); onOk(); };
+  document.getElementById('mo-confirm').classList.add('open');
+}
+function dlConfirmCancel(){ document.getElementById('mo-confirm').classList.remove('open'); }
+
+// ═══════════════════════════════════════════
+// TIEMPOS
+// ═══════════════════════════════════════════
+function thresh(orig, dest){
+  // Normaliza nombres de depot a clave de ruta: "Bs As"→"bsas", "Pico"→"pico", etc.
+  const toKey = s => s.toLowerCase().replace(/\s+/g, '').replace('bsas','bsas');
+  const ko = toKey(orig), kd = toKey(dest);
+  for(const def of ROUTE_DEFS){
+    const [a, b] = def.key.split('-');
+    if((a===ko && b===kd)||(a===kd && b===ko)){
+      const t = routeThresholds[def.key];
+      if(t && Array.isArray(t)) return t;
+      return [DEFAULT_THRESHOLDS[def.key]||48, DEFAULT_THRESHOLDS[def.key+'_a']||72];
+    }
+  }
+  return [48, 72];
+}
+function effectiveStart(fecha){
+  const d=new Date(fecha);
+  const dow=d.getDay();
+  if(dow===6){ d.setDate(d.getDate()+2); d.setHours(8,0,0,0); }
+  else if(dow===0){ d.setDate(d.getDate()+1); d.setHours(8,0,0,0); }
+  return d;
+}
+function weekdayHours(start,end){
+  let s=new Date(start), e=new Date(end), h=0;
+  if(s>=e) return 0;
+  while(s<e){
+    const dow=s.getDay();
+    if(dow!==0&&dow!==6){
+      const nextDay=new Date(s); nextDay.setDate(nextDay.getDate()+1); nextDay.setHours(0,0,0,0);
+      h+=(Math.min(e,nextDay)-s)/3600000;
+    }
+    const next=new Date(s); next.setDate(next.getDate()+1); next.setHours(0,0,0,0);
+    s=next;
+  }
+  return Math.max(0,h);
+}
+function calcStatus(e){
+  if(e.estado==='recibido') return {hrs:0,status:'ok',nL:48,aL:72};
+  const [nL,aL]=thresh(e.origen,e.destino);
+  const start=effectiveStart(e.fecha);
+  const now=nowAR();
+  const hrs=weekdayHours(start,now);
+  const status=hrs>=aL?'alert':hrs>=nL?'warn':'ok';
+  return {hrs,status,nL,aL};
+}
+function updBadge(){
+  const nb=document.getElementById('nb-recv');
+  if(!nb) return;
+  const u=currentUser;
+  const depot=u.role==='sucursal'?u.depot:null;
+  const count=envios.filter(e=>e.estado==='pendiente'&&(!depot||e.destino===depot)).length;
+  nb.textContent=count; nb.style.display=count?'':'none';
+}
+
+// ═══════════════════════════════════════════
+// DASHBOARD
+// ═══════════════════════════════════════════
+function buildPie(dep,all){
+  const items=all.filter(e=>e.destino===dep&&e.estado==='pendiente');
+  const a=items.filter(e=>calcStatusCached(e).status==='alert').length;
+  const w=items.filter(e=>calcStatusCached(e).status==='warn').length;
+  const ok=items.length-a-w;
+  const total=items.length||1;
+  const pcts=[a/total,w/total,ok/total];
+  const cols=['var(--alert)','var(--warn)','var(--ok)'];
+  const labels=['Alerta','Demorado','Normal'];
+  let cum=0;
+  const slices=pcts.map((p,i)=>{
+    if(p<=0) return '';
+    const s=cum*360, e=(cum+p)*360; cum+=p;
+    const r1=Math.PI*s/180, r2=Math.PI*e/180;
+    const x1=50+40*Math.sin(r1),y1=50-40*Math.cos(r1);
+    const x2=50+40*Math.sin(r2),y2=50-40*Math.cos(r2);
+    const lg=p>0.5?1:0;
+    return `<path d="M50,50 L${x1},${y1} A40,40 0 ${lg},1 ${x2},${y2} Z" fill="${cols[i]}" opacity=".85"/>`;
+  }).join('');
+  const legend=labels.map((l,i)=>`<div style="display:flex;align-items:center;gap:4px;font-size:.65rem;color:var(--text2)"><div style="width:8px;height:8px;border-radius:50%;background:${cols[i]}"></div>${l}: ${[a,w,ok][i]}</div>`).join('');
+  return `<div class="pie-card"><div class="pie-title">🏭 ${dep}</div><svg viewBox="0 0 100 100" width="90" height="90">${items.length?slices:'<circle cx="50" cy="50" r="40" fill="var(--ok)" opacity=".3"/>'}</svg><div style="font-size:.75rem;font-weight:700;color:var(--text);margin:4px 0">${items.length} pendiente${items.length!==1?'s':''}</div><div style="display:flex;flex-direction:column;gap:2px;align-items:flex-start">${legend}</div></div>`;
+}
+
+function buildAvgStats(filterDepot){
+  const recibidos=envios.filter(e=>e.estado==='recibido'&&e.fechaLlegada);
+  const now=nowAR();
+  const d7=new Date(now-7*24*3600*1000), d30=new Date(now-30*24*3600*1000);
+  function avg(list){ return list.length?list.reduce((a,b)=>a+b,0)/list.length:null; }
+  const routeStats={};
+  ROUTE_DEFS.forEach(def=>{
+    if(filterDepot&&def.o!==filterDepot&&def.d!==filterDepot) return;
+    const match=r=>(r.origen===def.o&&r.destino===def.d)||(r.origen===def.d&&r.destino===def.o);
+    const w7=recibidos.filter(r=>match(r)&&new Date(r.fechaLlegada)>=d7).map(r=>weekdayHours(effectiveStart(r.fecha),new Date(r.fechaLlegada)));
+    const w30=recibidos.filter(r=>match(r)&&new Date(r.fechaLlegada)>=d30).map(r=>weekdayHours(effectiveStart(r.fecha),new Date(r.fechaLlegada)));
+    routeStats[def.key]={label:def.label,avg7:avg(w7),avg30:avg(w30),count7:w7.length,count30:w30.length,def};
+  });
+  const keys=Object.keys(routeStats);
+  if(!keys.length) return '';
+  function chip(h,def){
+    if(h==null) return '<span style="color:var(--text3);font-size:.72rem">—</span>';
+    const [nL,aL]=thresh(def.o,def.d);
+    const col=h>=aL?'var(--alert)':h>=nL?'var(--warn)':'var(--ok)';
+    const bg=h>=aL?'var(--alert-lt)':h>=nL?'var(--warn-lt)':'var(--ok-lt)';
+    return `<span class="avg-chip" style="background:${bg};color:${col}">${fmtH(h)}</span>`;
+  }
+  function delta(w,m){
+    if(w==null||m==null) return '<span style="color:var(--text3)">—</span>';
+    const d=w-m; if(Math.abs(d)<1) return '<span style="color:var(--text3)">≈</span>';
+    return d>0?`<span style="color:var(--alert)">↑ ${fmtH(Math.abs(d))}</span>`:`<span style="color:var(--ok)">↓ ${fmtH(Math.abs(d))}</span>`;
+  }
+  const half=Math.ceil(keys.length/2);
+  function buildCard(ks){
+    const rows=ks.map(k=>{
+      const s=routeStats[k];
+      return `<tr><td>${s.label}</td><td style="text-align:center">${chip(s.avg7,s.def)}${s.count7?`<span class="avg-n">${s.count7}e</span>`:''}</td><td style="text-align:center">${chip(s.avg30,s.def)}${s.count30?`<span class="avg-n">${s.count30}e</span>`:''}</td><td style="text-align:center">${delta(s.avg7,s.avg30)}</td></tr>`;
+    }).join('');
+    return `<div class="avg-card"><div class="avg-card-head">📍 Rutas</div><table class="avg-table"><thead><tr><th>Ruta</th><th>7 días</th><th>30 días</th><th>Tendencia</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  }
+  return `<div class="avg-section"><div class="avg-section-title">📊 Promedio de tránsito por ruta <span style="font-size:.63rem;font-weight:400;text-transform:none;letter-spacing:0;color:#94a3b8">— horas hábiles · envíos recibidos</span></div><div class="avg-grid">${buildCard(keys.slice(0,half))}${keys.length>half?buildCard(keys.slice(half)):''}</div></div>`;
+}
+
+function renderDash(){
+  const u=currentUser, isSuc=u.role==='sucursal', depot=u.depot;
+  console.log('[renderDash] envios:', envios.length, 'extras:', extras.length, 'user:', u.id, u.role);
+  let allPend=envios.filter(e=>e.estado==='pendiente');
+  let allRecv=envios.filter(e=>e.estado==='recibido');
+  let dashPend=isSuc?allPend.filter(e=>e.destino===depot):allPend;
+  let dashRecv=isSuc?allRecv.filter(e=>e.destino===depot):allRecv;
+  document.getElementById('dash-title').textContent=isSuc?`Dashboard — ${depot}`:'Dashboard';
+  document.getElementById('dash-sub').textContent=isSuc?`Envíos entrantes a ${depot}`:'Estado en tiempo real de todos los envíos';
+  const stats=dashPend.map(e=>calcStatusCached(e).status);
+  const ac=stats.filter(s=>s==='alert').length, wc=stats.filter(s=>s==='warn').length;
+  const total=isSuc?dashPend.length+dashRecv.length:envios.length;
+  document.getElementById('sg').innerHTML=`
+    <div class="stat blue"><div class="sl">Total</div><div class="sv">${total}</div><div class="sd">${isSuc?'hacia '+depot:'envíos registrados'}</div></div>
+    <div class="stat blue"><div class="sl">Pendientes</div><div class="sv">${dashPend.length}</div><div class="sd">en tránsito</div></div>
+    <div class="stat ok"><div class="sl">Recibidos</div><div class="sv">${dashRecv.length}</div><div class="sd">confirmados</div></div>
+    <div class="stat warn"><div class="sl">Demorados</div><div class="sv">${wc}</div><div class="sd">fuera de tiempo normal</div></div>
+    <div class="stat alert"><div class="sl">🚨 Alertas</div><div class="sv">${ac}</div><div class="sd">atención inmediata</div></div>`;
+  let html='';
+  if(ac){ const list=dashPend.filter(e=>calcStatusCached(e).status==='alert').sort((a,b)=>a.fecha.localeCompare(b.fecha)); html+=`<div class="ab alert"><div class="ai">🚨</div><div class="abo"><div class="at">${ac} envío${ac>1?'s':''} en ALERTA</div><div class="ad">${list.map(e=>`<strong>${e.remito}</strong> (${e.origen}→${e.destino}, ${fmtH(calcStatusCached(e).hrs)})`).join(' · ')}</div></div></div>`; }
+  if(wc){ const list=dashPend.filter(e=>calcStatusCached(e).status==='warn').sort((a,b)=>a.fecha.localeCompare(b.fecha)); html+=`<div class="ab warn"><div class="ai">⚠️</div><div class="abo"><div class="at">${wc} envío${wc>1?'s':''} demorado${wc>1?'s':''}</div><div class="ad">${list.map(e=>`<strong>${e.remito}</strong> (${e.origen}→${e.destino}, ${fmtH(calcStatusCached(e).hrs)})`).join(' · ')}</div></div></div>`; }
+  document.getElementById('alarms').innerHTML=html;
+  document.getElementById('avg-stats').innerHTML=buildAvgStats(isSuc?depot:null);
+  const depotsToShow=isSuc?[depot]:DEPOTS;
+  const chartsHtml=`<div class="charts-grid">${depotsToShow.map(d=>buildPie(d,envios)).join('')}</div>`;
+  const depHtml=depotsToShow.map(dep=>{
+    const items=allPend.filter(e=>e.destino===dep).sort((a,b)=>a.fecha.localeCompare(b.fecha));
+    if(!items.length) return '';
+    const da=items.filter(e=>calcStatusCached(e).status==='alert').length, dw=items.filter(e=>calcStatusCached(e).status==='warn').length;
+    return `<div style="margin-bottom:20px"><div class="dsh"><span class="dn">🏭 ${dep}</span><span class="badge bbl">${items.length} pendiente${items.length>1?'s':''}</span>${da?`<span class="badge bal">🚨 ${da}</span>`:''}</div><div class="card" style="padding:0;overflow:hidden"><div class="tw"><table><thead><tr><th>Estado</th><th>Horas</th><th>Progreso</th><th>Fecha Salida</th><th>Origen</th><th>Remito</th><th>Transporte</th></tr></thead><tbody>${items.map(e=>{const {hrs,status,nL,aL}=calcStatusCached(e);const col=status==='alert'?'var(--alert)':status==='warn'?'var(--warn)':'var(--ok)';return `<tr class="${rCls(status)}"><td>${sBadge(status)}</td><td class="mono" style="font-weight:700;color:${col}">${fmtH(hrs)}</td><td>${prog(hrs,nL,aL,status)}</td><td>${fmtDT(e.fecha)}</td><td><span class="chip">${e.origen}</span></td><td class="mono" style="color:var(--blue-md);font-weight:600">${e.remito}</td><td>${e.transporte||'—'}</td></tr>`;}).join('')}</tbody></table></div></div></div>`;
+  }).join('');
+  document.getElementById('depots').innerHTML=chartsHtml+(depHtml||`<div class="card"><div class="empty"><div class="empty-icon">🎉</div><div class="empty-text">Sin pendientes</div></div></div>`);
+}
+
+// ═══════════════════════════════════════════
+// TODOS LOS ENVÍOS
+// ═══════════════════════════════════════════
+function renderEnvios(){
+  const u=currentUser, isSuc=u.role==='sucursal', isAdmin=u.role==='admin', depot=u.depot;
+  document.getElementById('env-title').textContent=isSuc?`Envíos — ${depot}`:'Todos los Envíos';
+  document.getElementById('env-sub').textContent=isSuc?`Despachados y recibidos de ${depot}`:'Estado de todos los envíos';
+  const filtersEl=document.getElementById('env-filters');
+  filtersEl.style.display=(isAdmin||u.role==='readonly')?'flex':'none';
+  const desde=(isAdmin||u.role==='readonly')?document.getElementById('flt-desde').value:'';
+  const hacia=(isAdmin||u.role==='readonly')?document.getElementById('flt-hacia').value:'';
+  const buscar=(document.getElementById('hist-search').value||'').toLowerCase().trim();
+  const STATUS_ORDER={alert:0,warn:1,ok:2};
+  let base=[...envios];
+  if(isSuc) base=base.filter(e=>e.origen===depot||e.destino===depot);
+  else { if(desde) base=base.filter(e=>e.origen===desde); if(hacia) base=base.filter(e=>e.destino===hacia); }
+  const pendientes=base.filter(e=>e.estado==='pendiente').sort((a,b)=>{
+    const sa=calcStatusCached(a),sb=calcStatusCached(b);
+    const oa=STATUS_ORDER[sa.status],ob=STATUS_ORDER[sb.status];
+    if(oa!==ob) return oa-ob;
+    return sb.hrs-sa.hrs;
+  });
+  const recibidos=base.filter(e=>e.estado==='recibido').sort((a,b)=>(b.fechaLlegada||'').localeCompare(a.fechaLlegada||''));
+
+  // Sección por recibir (siempre visible para todos)
+  let recvPendAll;
+  if(isSuc){ recvPendAll=pendientes.filter(e=>e.destino===depot); document.getElementById('sec-recv-title').textContent=`📥 Por recibir en ${depot}`; }
+  else { recvPendAll=pendientes.filter(e=>hacia?e.destino===hacia:true); document.getElementById('sec-recv-title').textContent=`📥 Por recibir${hacia?' en '+hacia:''}`; }
+  const recvCount=recvPendAll.length, recvA=recvPendAll.filter(e=>calcStatusCached(e).status==='alert').length, recvW=recvPendAll.filter(e=>calcStatusCached(e).status==='warn').length;
+  const recvBadge=document.getElementById('sec-recv-badge');
+  recvBadge.textContent=recvCount?`${recvCount} envío${recvCount>1?'s':''}`:' Sin pendientes';
+  recvBadge.className='env-sec-badge '+(recvA?'alert':recvW?'warn':recvCount?'ok':'');
+  document.getElementById('th-acciones3').style.display=isAdmin?'':'none';
+  const remitoCell=(e)=>isAdmin?`<td class="mono" style="color:var(--blue-md);font-weight:600;padding:4px 10px"><input class="remito-edit" value="${e.remito}" data-orig="${e.remito}" onblur="editRemito('${e.id}',this)" onkeydown="if(event.key==='Enter')this.blur();if(event.key==='Escape'){this.value=this.dataset.orig;this.blur()}" title="Enter/Esc"/></td>`:`<td class="mono" style="color:var(--blue-md);font-weight:600">${e.remito}</td>`;
+  const emptyR2=n=>`<tr><td colspan="${n}"><div class="empty" style="padding:14px 0"><div class="empty-icon">📭</div><div class="empty-text">Sin envíos pendientes de recibir</div></div></td></tr>`;
+  document.getElementById('tb-por-recibir').innerHTML=recvPendAll.length?recvPendAll.map(e=>{
+    const {hrs,status}=calcStatusCached(e);const col=status==='alert'?'var(--alert)':status==='warn'?'var(--warn)':'var(--ok)';
+    const notaE=e.obs?`<td class="nota-cell" title="${e.obs}">${e.obs}</td>`:'<td>—</td>';
+    return `<tr class="${rCls(status)}"><td>${sBadge(status)}</td><td>${fmtDT(e.fecha)}</td><td class="mono" style="font-weight:700;color:${col}">${fmtH(hrs)}</td><td><span class="chip">${e.origen}</span></td><td><span class="chip">${e.destino}</span></td>${remitoCell(e)}<td>${e.transporte||'—'}</td>${notaE}${isAdmin?`<td style="display:flex;gap:4px"><button class="btn bs bsm" onclick="openModal('${e.id}')">Recibir</button>${!e.isSeed?`<button class="btn bg bsm" onclick="delEnvio('${e.id}')" title="Eliminar">🗑</button>`:`<button class="btn bsm" style="background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0" onclick="delSeed('${e.id}')" title="Ocultar">🗑</button>`}</td>`:'<td></td>'}</tr>`;
+  }).join(''):emptyR2(9);
+
+  // Sección en tránsito
+  const despPend=isSuc?pendientes.filter(e=>e.origen===depot):pendientes;
+  const despCount=despPend.length, despA=despPend.filter(e=>calcStatusCached(e).status==='alert').length, despW=despPend.filter(e=>calcStatusCached(e).status==='warn').length;
+  document.getElementById('sec-desp-title').textContent=isSuc?`🚚 En tránsito — Despachados desde ${depot}`:'🚚 En tránsito';
+  const despBadge=document.getElementById('sec-desp-badge');
+  despBadge.textContent=despCount?`${despCount} envío${despCount>1?'s':''}`:' Sin pendientes';
+  despBadge.className='env-sec-badge '+(despA?'alert':despW?'warn':despCount?'ok':'');
+  document.getElementById('th-acciones').style.display=isAdmin?'':'none';
+  const emptyR=n=>`<tr><td colspan="${n}"><div class="empty" style="padding:14px 0"><div class="empty-icon">📭</div><div class="empty-text">Sin envíos en tránsito</div></div></td></tr>`;
+  document.getElementById('tb-despachos').innerHTML=despPend.length?despPend.map(e=>{
+    const {hrs,status}=calcStatusCached(e);const col=status==='alert'?'var(--alert)':status==='warn'?'var(--warn)':'var(--ok)';
+    const notaD=e.obs?`<td class="nota-cell" title="${e.obs}">${e.obs}</td>`:'<td>—</td>';
+    return `<tr class="${rCls(status)}"><td>${sBadge(status)}</td><td>${isAdmin?`<input type="datetime-local" value="${e.fecha?e.fecha.slice(0,16):''}" onchange="editFechaDespacho('${e.id}',this.value)" style="font-size:.74rem;border:1px solid var(--border);border-radius:6px;padding:3px 6px;font-family:inherit">`:fmtDT(e.fecha)}</td><td class="mono" style="font-weight:700;color:${col}">${fmtH(hrs)}</td><td><span class="chip">${e.origen}</span></td><td><span class="chip">${e.destino}</span></td>${remitoCell(e)}<td>${e.transporte||'—'}</td>${notaD}${isAdmin?`<td style="display:flex;gap:4px"><button class="btn bs bsm" onclick="openModal('${e.id}')">Recibir</button>${!e.isSeed?`<button class="btn bg bsm" onclick="delEnvio('${e.id}')" title="Eliminar">🗑</button>`:`<button class="btn bsm" style="background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0" onclick="delSeed('${e.id}')" title="Ocultar">🗑</button>`}</td>`:'<td></td>'}</tr>`;
+  }).join(''):emptyR(isAdmin?9:8);
+
+  // Sección historial
+  let hist=recibidos;
+  if(buscar) hist=hist.filter(e=>e.remito.toLowerCase().includes(buscar)||e.origen.toLowerCase().includes(buscar)||e.destino.toLowerCase().includes(buscar)||(e.transporte||'').toLowerCase().includes(buscar));
+  const histCount=recibidos.length;
+  document.getElementById('sec-hist-title').textContent=`Historial — ${histCount} recibido${histCount!==1?'s':''}`;
+  const histBadge=document.getElementById('sec-hist-badge');
+  histBadge.textContent=buscar?`${hist.length} resultado${hist.length!==1?'s':''}`:' ';
+  histBadge.className='env-sec-badge'+(buscar&&hist.length?' ok':buscar&&!hist.length?' alert':'');
+  document.getElementById('th-acciones2').style.display=isAdmin?'':'none';
+  const emptyH=n=>`<tr><td colspan="${n}"><div class="empty" style="padding:14px 0"><div class="empty-icon">${buscar?'🔍':'✅'}</div><div class="empty-text">${buscar?'Sin resultados':'Sin recibidos aún'}</div></div></td></tr>`;
+  document.getElementById('tb-historial').innerHTML=hist.length?hist.map(e=>{
+    const notaEnv=e.obs?`<td class="nota-cell" title="${e.obs}">${e.obs}</td>`:'<td style="color:var(--text3);font-size:.72rem">—</td>';
+    const notaRec=e.obsRecv?`<td class="nota-cell recv" title="${e.obsRecv}">${e.obsRecv}</td>`:'<td style="color:var(--text3);font-size:.72rem">—</td>';
+    return `<tr><td>${fmtDT(e.fecha)}</td><td>${fmtDT(e.fechaLlegada)}</td><td><span class="chip">${e.origen}</span></td><td><span class="chip">${e.destino}</span></td>${remitoCell(e)}<td>${e.transporte||'—'}</td>${notaEnv}${notaRec}${isAdmin?`<td style="display:flex;gap:4px"><button class="btn bsm" style="background:var(--warn-lt);color:var(--warn);border:1px solid var(--warn-lt)" onclick="revertirRecepcion('${e.id}')" title="Volver a Pendiente">↩</button>${!e.isSeed?`<button class="btn bg bsm" onclick="delEnvio('${e.id}')">🗑</button>`:''}${e.isSeed?`<button class="btn bsm" style="background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0;font-size:.65rem" onclick="delSeed('${e.id}')">🗑</button>`:''}</td>`:'<td></td>'}</tr>`;
+  }).join(''):emptyH(isAdmin?9:8);
+}
+
+function toggleHistorial(){
+  const body=document.getElementById('hist-body');
+  const open=body.style.display!=='none';
+  body.style.display=open?'none':'block';
+  document.getElementById('hist-toggle-icon').textContent=open?'▶':'▼';
+}
+
+// ═══════════════════════════════════════════
+// RECEPCIÓN
+// ═══════════════════════════════════════════
+let recepcionDepot = null;
+function renderRecepcion(){
+  const u=currentUser, isSuc=u.role==='sucursal', isAdmin=u.role==='admin';
+  let depotList=isSuc?[u.depot]:DEPOTS;
+  if(!recepcionDepot||!depotList.includes(recepcionDepot)) recepcionDepot=depotList[0];
+  const tabs=document.getElementById('tabs-rec');
+  if(isAdmin){
+    tabs.innerHTML=depotList.map(d=>`<div class="tab${d===recepcionDepot?' active':''}" onclick="recepcionDepot='${d}';renderRecepcion()">${d}</div>`).join('');
+  } else { tabs.innerHTML=''; }
+  const items=envios.filter(e=>e.estado==='pendiente'&&e.destino===recepcionDepot).sort((a,b)=>{
+    const sa=calcStatusCached(a),sb=calcStatusCached(b);
+    const ord={alert:0,warn:1,ok:2};
+    if(ord[sa.status]!==ord[sb.status]) return ord[sa.status]-ord[sb.status];
+    return sa.hrs-sb.hrs;
+  });
+  const alm=document.getElementById('rec-alarms');
+  const ac=items.filter(e=>calcStatusCached(e).status==='alert').length, wc=items.filter(e=>calcStatusCached(e).status==='warn').length;
+  let ah='';
+  if(ac) ah+=`<div class="ab alert" style="margin-bottom:8px"><div class="ai">🚨</div><div class="abo"><div class="at">${ac} en ALERTA — requieren atención inmediata</div></div></div>`;
+  if(wc) ah+=`<div class="ab warn" style="margin-bottom:8px"><div class="ai">⚠️</div><div class="abo"><div class="at">${wc} demorado${wc>1?'s':''}</div></div></div>`;
+  alm.innerHTML=ah;
+  document.getElementById('tb-rec').innerHTML=items.length?items.map(e=>{
+    const {hrs,status,nL,aL}=calcStatusCached(e);const col=status==='alert'?'var(--alert)':status==='warn'?'var(--warn)':'var(--ok)';
+    return `<tr class="${rCls(status)}"><td>${sBadge(status)}</td><td class="mono" style="font-weight:700;color:${col}">${fmtH(hrs)}</td><td class="mono">${fmtH(nL)}/${fmtH(aL)}</td><td>${prog(hrs,nL,aL,status)}</td><td>${isAdmin?`<input type="datetime-local" value="${e.fecha?e.fecha.slice(0,16):''}" onchange="editFechaDespacho('${e.id}',this.value)" style="font-size:.74rem;border:1px solid var(--border);border-radius:6px;padding:3px 6px;font-family:inherit">`:fmtDT(e.fecha)}</td><td><span class="chip">${e.origen}</span></td><td><span class="chip">${e.destino}</span></td><td class="mono" style="color:var(--blue-md);font-weight:600">${e.remito}</td><td>${e.tipo||'—'}</td><td>${e.cantidad||'—'}</td><td>${e.transporte||'—'}</td><td><button class="btn bs bsm" onclick="openModal('${e.id}')">✓ Recibir</button></td></tr>`;
+  }).join(''):`<tr><td colspan="12"><div class="empty"><div class="empty-icon">📭</div><div class="empty-text">Sin envíos pendientes para ${recepcionDepot}</div></div></td></tr>`;
+}
+
+// ═══════════════════════════════════════════
+// ALTA ENVÍO
+// ═══════════════════════════════════════════
+function initAlta(){
+  const u=currentUser, isSuc=u.role==='sucursal', isAdmin=u.role==='admin';
+  const fechaEl=document.getElementById('f-fecha');
+  // Admin puede cargar fechas pasadas (ej: carga retroactiva)
+  // Sucursal solo puede desde ahora
+  if(isSuc){
+    fechaEl.min=nowDT();
+    if(!fechaEl.value||fechaEl.value<nowDT()) fechaEl.value=nowDT();
+  } else {
+    fechaEl.removeAttribute('min');
+    if(!fechaEl.value) fechaEl.value=nowDT();
+  }
+  const oriSel=document.getElementById('f-ori');
+  if(isSuc){
+    oriSel.value=u.depot; oriSel.disabled=true;
+  } else {
+    oriSel.disabled=false; if(!oriSel.value) oriSel.value='';
+  }
+  updateDestOptions(); updateTransporteSelect();
+}
+
+function updateDestOptions(){
+  const ori=document.getElementById('f-ori');
+  const oriVal=ori.disabled?currentUser.depot:ori.value;
+  const dst=document.getElementById('f-dst');
+  dst.innerHTML='<option value="">— Seleccioná —</option>';
+  DEPOTS.filter(d=>d!==oriVal).forEach(d=>{ const o=document.createElement('option'); o.value=o.textContent=d; dst.appendChild(o); });
+}
+
+function updateTransporteSelect(){
+  const ori=document.getElementById('f-ori');
+  const oriVal=ori.disabled?currentUser.depot:ori.value;
+  const traList=oriVal?(depoTransportes[oriVal]||[]):[];
+  const sel=document.getElementById('f-tra');
+  if(!oriVal){ sel.innerHTML='<option value="">— Seleccioná origen primero —</option>'; return; }
+  sel.innerHTML='<option value="">— Seleccioná —</option>'+traList.map(t=>`<option>${t}</option>`).join('');
+}
+
+function limpiar(){
+  const u=currentUser;
+  ['f-dst','f-tipo','f-mod','f-tra'].forEach(id=>document.getElementById(id).value='');
+  ['f-rem','f-obs'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('f-cant').value='1';
+  // Admin mantiene la fecha para carga retroactiva; sucursal siempre resetea a ahora
+  if(u&&u.role!=='admin') document.getElementById('f-fecha').value=nowDT();
+  if(u&&u.role==='sucursal'){
+    document.getElementById('f-ori').value=u.depot;
+  }
+  updateDestOptions(); updateTransporteSelect();
+}
+
+function altaEnvio(){
+  const ori=document.getElementById('f-ori');
+  const origen=ori.disabled?currentUser.depot:ori.value;
+  const destino=document.getElementById('f-dst').value;
+  const fecha=document.getElementById('f-fecha').value;
+  const remito=document.getElementById('f-rem').value.trim();
+  const tipo=document.getElementById('f-tipo').value;
+  const mod=document.getElementById('f-mod').value;
+  const cant=document.getElementById('f-cant').value;
+  const tra=document.getElementById('f-tra').value;
+
+  if(!origen||!destino||!fecha){ toast('⚠ Completá origen, destino y fecha'); return; }
+  if(!remito){ toast('⚠ Ingresá el número de remito'); return; }
+  if(!tipo){ toast('⚠ Seleccioná el tipo'); return; }
+  if(!mod){ toast('⚠ Seleccioná la modalidad'); return; }
+  if(!cant||Number(cant)<1){ toast('⚠ Ingresá la cantidad'); return; }
+  if(!tra){ toast('⚠ Seleccioná el transporte'); return; }
+  if(origen===destino){ toast('⚠ Origen y destino no pueden ser iguales'); return; }
+  if(envios.find(e=>String(e.remito)===remito)){ toast('⚠ Ese remito ya existe'); return; }
+
+  const tail=remito.slice(-5);
+  const similar=envios.find(e=>String(e.remito)!==remito&&String(e.remito).slice(-5)===tail);
+  if(similar){
+    dlConfirm(
+      'Remito similar existente',
+      'Los últimos 5 dígitos coinciden con el remito ' + similar.remito + ' (' + similar.origen + '→' + similar.destino + '). ¿Confirmás que es un remito distinto?',
+      ()=>_registrarEnvio(origen,destino,fecha,remito,tipo,mod,cant,tra)
+    );
+    return;
+  }
+
+  _registrarEnvio(origen,destino,fecha,remito,tipo,mod,cant,tra);
+}
+
+function _registrarEnvio(origen,destino,fecha,remito,tipo,modalidad,cantidad,transporte){
+  const nuevoEnvio={
+    id:'ext-'+Date.now(), origen,destino,fecha,remito,tipo,modalidad,cantidad,
+    transporte,obs:document.getElementById('f-obs').value.trim(),
+    estado:'pendiente',fechaLlegada:null,obsRecv:null,isSeed:false
+  };
+  extras.push(nuevoEnvio);
+  rebuildEnvios();
+  saveState(); limpiar(); updBadge();
+  toast(`✓ Envío ${remito} registrado`);
+  show('envios');
+  gasSend('altaEnvio',{envio:nuevoEnvio});
+}
+
+// ═══════════════════════════════════════════
+// MODAL RECEPCIÓN
+// ═══════════════════════════════════════════
+let recvId=null;
+let recvFechaISO = null;
+function openModal(id){
+  const e=envios.find(x=>x.id===id);
+  if(!e) return;
+  recvId=id;
+  recvFechaISO=nowDT();
+  const isAdmin=currentUser.role==='admin';
+  const fechaEl=document.getElementById('m-llegada');
+  document.getElementById('m-info').value=`${e.remito} · ${e.origen} → ${e.destino}`;
+  if(isAdmin){
+    // Admin: editable, puede cargar cualquier fecha/hora
+    fechaEl.type='datetime-local';
+    fechaEl.readOnly=false;
+    fechaEl.style.background='';
+    fechaEl.style.color='';
+    fechaEl.value=recvFechaISO;
+  } else {
+    // Sucursal: readonly, fecha y hora exacta del momento
+    fechaEl.type='datetime-local';
+    fechaEl.readOnly=true;
+    fechaEl.style.background='var(--surface2)';
+    fechaEl.style.color='var(--text2)';
+    fechaEl.value=recvFechaISO;
+  }
+  document.getElementById('m-obs-r').value='';
+  document.getElementById('mo-recv').classList.add('open');
+}
+function closeModal(){ document.getElementById('mo-recv').classList.remove('open'); recvId=null; }
+
+function confirmar(){
+  if(!recvId) return;
+  const isAdmin=currentUser.role==='admin';
+  // Admin usa el valor del campo (puede ser editado); sucursal usa el timestamp capturado
+  const llegada=isAdmin?document.getElementById('m-llegada').value:recvFechaISO;
+  const obs=document.getElementById('m-obs-r').value.trim();
+  if(!llegada){ toast('⚠ Error: no se pudo capturar la fecha'); return; }
+  const upd={estado:'recibido',fechaLlegada:llegada,obsRecv:obs};
+  if(recvId.startsWith('seed-')){
+    changes[recvId]=Object.assign({},changes[recvId]||{},upd);
+  } else {
+    const idx=extras.findIndex(x=>x.id===recvId);
+    if(idx>=0) Object.assign(extras[idx],upd);
+  }
+  // Capturar id y remito ANTES de cerrar el modal (closeModal resetea recvId)
+  const _id=recvId;
+  const _envio=envios.find(x=>x.id===recvId);
+  const _remito=_envio?String(_envio.remito):'';
+  saveState(); rebuildEnvios(); updBadge();
+  closeModal();
+  toast('✅ Recepción confirmada');
+  gasSend('confirmarRecepcion',{id:_id,remito:_remito,fechaLlegada:llegada,obsRecv:obs||'',envio:_envio||{}});
+  renderRecepcion(); renderEnvios();
+}
+
+// ═══════════════════════════════════════════
+// CRUD ADMIN
+// ═══════════════════════════════════════════
+function editRemito(id,input){
+  const nuevo=input.value.trim(), orig=input.dataset.orig;
+  if(!nuevo){ input.value=orig; toast('⚠ El remito no puede estar vacío'); return; }
+  if(nuevo===orig) return;
+  if(envios.find(e=>e.remito===nuevo&&e.id!==id)){ input.value=orig; toast('⚠ Ese remito ya existe'); return; }
+  if(id.startsWith('seed-')){ changes[id]=Object.assign({},changes[id]||{},{remito:nuevo}); }
+  else { const idx=extras.findIndex(x=>x.id===id); if(idx>=0) extras[idx].remito=nuevo; }
+  input.dataset.orig=nuevo;
+  saveState(); rebuildEnvios();
+  toast(`✓ Remito actualizado → ${nuevo}`);
+}
+
+function editFechaDespacho(id,nuevaFecha){
+  if(!nuevaFecha) return;
+  if(id.startsWith('seed-')){ changes[id]=Object.assign({},changes[id]||{},{fecha:nuevaFecha}); }
+  else { const idx=extras.findIndex(x=>x.id===id); if(idx>=0) extras[idx].fecha=nuevaFecha; }
+  saveState(); rebuildEnvios();
+  toast('✓ Fecha actualizada');
+  gasSend('editFechaDespacho',{id,fecha:nuevaFecha});
+}
+
+function revertirRecepcion(id){
+  if(currentUser.role!=='admin') return;
+  const upd={estado:'pendiente',fechaLlegada:null,obsRecv:null};
+  if(id.startsWith('seed-')){ changes[id]=Object.assign({},changes[id]||{},upd); }
+  else { const idx=extras.findIndex(x=>x.id===id); if(idx>=0) Object.assign(extras[idx],upd); }
+  saveState(); rebuildEnvios(); updBadge();
+  toast('↩ Recepción revertida');
+  // ✅ Sincronizar con GAS (bug corregido: antes no llamaba gasSend)
+  gasSend('revertirRecepcion', { id });
+  renderEnvios();
+}
+
+function delEnvio(id){
+  dlConfirm('Eliminar envío','¿Eliminar este envío permanentemente?',()=>{
+    extras=extras.filter(x=>x.id!==id);
+    saveState(); rebuildEnvios(); updBadge();
+    toast('🗑 Envío eliminado');
+    gasSend('eliminarEnvio',{id});
+    renderEnvios();
+  });
+}
+
+function delSeed(id){
+  dlConfirm('Eliminar envío base','Este envío es del historial base. ¿Ocultar de la vista?',()=>{
+    changes[id]=Object.assign({},changes[id]||{},{_deleted:true});
+    saveState(); rebuildEnvios(); updBadge();
+    toast('🗑 Ocultado del historial');
+    renderEnvios();
+  });
+}
+
+// ═══════════════════════════════════════════
+// TIEMPOS POR RUTA
+// ═══════════════════════════════════════════
+function renderRoutes(){
+  const isAdmin=currentUser.role==='admin';
+  const opts=(sel)=>[24,36,48,60,72,84,96,120].map(h=>`<option value="${h}"${h===sel?' selected':''}>${h}h</option>`).join('');
+  document.getElementById('th-guardar-rutas').innerHTML=isAdmin?`<button class="btn bs bsm" onclick="saveRoutes()">💾 Guardar cambios</button>`:'';
+  document.getElementById('tb-rutas').innerHTML=ROUTE_DEFS.map(def=>{
+    const [nL,aL]=routeThresholds[def.key]||[48,72];
+    if(isAdmin){
+      return `<tr><td style="font-weight:600">${def.label}</td><td><select id="rt-n-${def.key}" style="border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-family:inherit;font-size:.78rem">${opts(nL)}</select></td><td><select id="rt-a-${def.key}" style="border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-family:inherit;font-size:.78rem">${opts(aL)}</select></td><td><span class="badge bal">+${aL}h</span></td><td></td></tr>`;
+    }
+    return `<tr><td style="font-weight:600">${def.label}</td><td><span class="badge-ok badge">hasta ${nL}h</span></td><td><span class="badge-warn badge">${nL}–${aL}h</span></td><td><span class="badge-alert badge">+${aL}h</span></td><td></td></tr>`;
+  }).join('');
+}
+
+function saveRoutes(){
+  ROUTE_DEFS.forEach(def=>{
+    const n=parseInt(document.getElementById(`rt-n-${def.key}`)?.value||48);
+    const a=parseInt(document.getElementById(`rt-a-${def.key}`)?.value||72);
+    routeThresholds[def.key]=[n,a];
+  });
+  localStorage.setItem('dl_routes',JSON.stringify(routeThresholds));
+  toast('✅ Tiempos guardados');
+  gasSend('updateRutas',{rutas:routeThresholds});
+}
+
+// ═══════════════════════════════════════════
+// TRANSPORTES
+// ═══════════════════════════════════════════
+let traTemp={};
+function renderTransportesView(){
+  traTemp=JSON.parse(JSON.stringify(depoTransportes));
+  const content=document.getElementById('transportes-content');
+  content.innerHTML=`
+    <div class="card" style="margin-bottom:14px">
+      <div style="font-size:.78rem;font-weight:700;color:var(--text2);margin-bottom:8px;text-transform:uppercase;letter-spacing:.4px">➕ Agregar transporte</div>
+      <div style="display:flex;gap:8px">
+        <input type="text" id="tra-new" placeholder="Nombre del transporte" style="flex:1;padding:8px 11px;border:1.5px solid var(--border);border-radius:8px;font-size:.85rem;font-family:inherit;outline:none"/>
+        <button class="btn bs" onclick="addTransporte()">Agregar</button>
+      </div>
+    </div>
+    <div class="tra-grid" id="tra-grid"></div>
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <button class="btn bs" onclick="saveTransportesView()">💾 Guardar</button>
+      <button class="btn bg" onclick="renderTransportesView()">↺ Descartar</button>
+    </div>`;
+  buildTraGrid();
+}
+
+function buildTraGrid(){
+  document.getElementById('tra-grid').innerHTML = DEPOTS.map(dep => {
+    const checks = ALL_TRANSPORTES.map(t => {
+      const checked = (traTemp[dep]||[]).includes(t) ? 'checked' : '';
+      const uid = 'trc_' + dep.replace(/\s/g,'_') + '_' + t.replace(/\s/g,'_');
+      return `<div class="tra-check">
+        <input type="checkbox" id="${uid}" data-dep="${dep}" data-tra="${t}" ${checked}/>
+        <label for="${uid}">${t}</label>
+      </div>`;
+    }).join('');
+    return `<div class="tra-depot-card">
+      <div class="tra-depot-title">🏭 ${dep}</div>
+      ${checks}
+    </div>`;
+  }).join('');
+  // Actualizar traTemp en tiempo real al cambiar checks
+  document.querySelectorAll('#tra-grid input[type=checkbox]').forEach(cb => {
+    cb.addEventListener('change', syncTraTemp);
+  });
+}
+
+function syncTraTemp(){
+  DEPOTS.forEach(dep => {
+    const key = dep.replace(/\s/g,'_');
+    traTemp[dep] = [...document.querySelectorAll(`#tra-grid input[data-dep="${dep}"]`)]
+      .filter(c => c.checked)
+      .map(c => c.dataset.tra);
+  });
+}
+
+function addTransporte(){
+  const inp=document.getElementById('tra-new');
+  const name=inp.value.trim();
+  if(!name){ toast('⚠ Ingresá el nombre'); return; }
+  if(ALL_TRANSPORTES.includes(name)){ toast('⚠ Ya existe'); return; }
+  ALL_TRANSPORTES.push(name);
+  localStorage.setItem('dl_tra_list',JSON.stringify(ALL_TRANSPORTES));
+  inp.value='';
+  buildTraGrid();
+  toast(`✓ ${name} agregado`);
+}
+
+function saveTransportesView(){
+  syncTraTemp();
+  DEPOTS.forEach(dep => { depoTransportes[dep] = traTemp[dep] || []; });
+  localStorage.setItem('dl_transportes', JSON.stringify(depoTransportes));
+  toast('✅ Transportes guardados');
+  gasSend('updateTransportes', { transportes:{ lista:ALL_TRANSPORTES, depots:depoTransportes } });
+}
+
+// ═══════════════════════════════════════════
+// REPORTE
+// ═══════════════════════════════════════════
+function renderReporte(){
+  const dias   = parseInt(document.getElementById('rpt-periodo').value);
+  const estado = document.getElementById('rpt-estado').value;
+  const now    = nowAR();
+  const desde  = dias>0 ? new Date(now - dias*24*3600*1000) : null;
+
+  let base = [...envios];
+  if(estado) base = base.filter(e=>e.estado===estado);
+  if(desde)  base = base.filter(e=>new Date(e.fecha)>=desde);
+
+  // Stats generales
+  const total    = base.length;
+  const recibidos= base.filter(e=>e.estado==='recibido').length;
+  const pendientes= base.filter(e=>e.estado==='pendiente').length;
+  const alertas  = base.filter(e=>e.estado==='pendiente'&&calcStatusCached(e).status==='alert').length;
+
+  // Tiempo promedio de tránsito
+  const conTiempo = base.filter(e=>e.estado==='recibido'&&e.fechaLlegada);
+  const avgHrs    = conTiempo.length ? conTiempo.reduce((a,e)=>a+weekdayHours(effectiveStart(e.fecha),new Date(e.fechaLlegada)),0)/conTiempo.length : null;
+
+  document.getElementById('rpt-stats').innerHTML=`
+    <div class="stat blue"><div class="sl">Total</div><div class="sv">${total}</div><div class="sd">envíos en el período</div></div>
+    <div class="stat ok"><div class="sl">Recibidos</div><div class="sv">${recibidos}</div><div class="sd">completados</div></div>
+    <div class="stat blue"><div class="sl">Pendientes</div><div class="sv">${pendientes}</div><div class="sd">en tránsito</div></div>
+    <div class="stat alert"><div class="sl">🚨 Alertas</div><div class="sv">${alertas}</div><div class="sd">activas</div></div>
+    <div class="stat warn"><div class="sl">Prom. tránsito</div><div class="sv">${avgHrs!=null?fmtH(avgHrs):'—'}</div><div class="sd">horas hábiles</div></div>`;
+
+  // Por ruta
+  const porRuta = {};
+  base.forEach(e=>{
+    const key = e.origen+' → '+e.destino;
+    if(!porRuta[key]) porRuta[key]={label:key,total:0,recibidos:0,hrs:[]};
+    porRuta[key].total++;
+    if(e.estado==='recibido'&&e.fechaLlegada){
+      porRuta[key].recibidos++;
+      porRuta[key].hrs.push(weekdayHours(effectiveStart(e.fecha),new Date(e.fechaLlegada)));
+    }
+  });
+
+  // Por transporte
+  const porTra = {};
+  base.forEach(e=>{
+    const t=e.transporte||'Sin asignar';
+    if(!porTra[t]) porTra[t]={total:0,recibidos:0};
+    porTra[t].total++;
+    if(e.estado==='recibido') porTra[t].recibidos++;
+  });
+
+  // Por tipo
+  const porTipo = {};
+  base.forEach(e=>{
+    const t=e.tipo||'—';
+    if(!porTipo[t]) porTipo[t]=0;
+    porTipo[t]++;
+  });
+
+  const rutaRows = Object.values(porRuta).sort((a,b)=>b.total-a.total).map(r=>{
+    const avg = r.hrs.length ? fmtH(r.hrs.reduce((a,b)=>a+b,0)/r.hrs.length) : '—';
+    return `<tr><td style="font-weight:600">${r.label}</td><td style="text-align:center">${r.total}</td><td style="text-align:center">${r.recibidos}</td><td style="text-align:center">${avg}</td></tr>`;
+  }).join('');
+
+  const traRows = Object.entries(porTra).sort((a,b)=>b[1].total-a[1].total).map(([t,v])=>
+    `<tr><td style="font-weight:600">${t}</td><td style="text-align:center">${v.total}</td><td style="text-align:center">${v.recibidos}</td></tr>`
+  ).join('');
+
+  const tipoRows = Object.entries(porTipo).sort((a,b)=>b[1]-a[1]).map(([t,v])=>
+    `<tr><td style="font-weight:600">${t}</td><td style="text-align:center">${v}</td></tr>`
+  ).join('');
+
+  document.getElementById('rpt-grid').innerHTML=`
+    <div class="rpt-card">
+      <div class="rpt-card-head">📍 Por ruta</div>
+      <table class="rpt-table"><thead><tr><th>Ruta</th><th>Total</th><th>Recibidos</th><th>Prom.</th></tr></thead><tbody>${rutaRows||'<tr><td colspan="4" style="text-align:center;color:var(--text3);padding:14px">Sin datos</td></tr>'}</tbody></table>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div class="rpt-card">
+        <div class="rpt-card-head">🚛 Por transporte</div>
+        <table class="rpt-table"><thead><tr><th>Transporte</th><th>Total</th><th>Recibidos</th></tr></thead><tbody>${traRows||'<tr><td colspan="3" style="text-align:center;color:var(--text3);padding:14px">Sin datos</td></tr>'}</tbody></table>
+      </div>
+      <div class="rpt-card">
+        <div class="rpt-card-head">📋 Por tipo</div>
+        <table class="rpt-table"><thead><tr><th>Tipo</th><th>Cantidad</th></tr></thead><tbody>${tipoRows||'<tr><td colspan="2" style="text-align:center;color:var(--text3);padding:14px">Sin datos</td></tr>'}</tbody></table>
+      </div>
+    </div>`;
+}
+
+function exportarCSV(){
+  const dias   = parseInt(document.getElementById('rpt-periodo').value);
+  const estado = document.getElementById('rpt-estado').value;
+  const now    = nowAR();
+  const desde  = dias>0 ? new Date(now - dias*24*3600*1000) : null;
+
+  let base = [...envios];
+  if(estado) base = base.filter(e=>e.estado===estado);
+  if(desde)  base = base.filter(e=>new Date(e.fecha)>=desde);
+
+  const header = ['ID','Origen','Destino','Fecha Salida','Remito','Tipo','Modalidad','Cantidad','Transporte','Observaciones','Estado','Fecha Llegada','Obs Recepcion','Horas Transito'];
+  const rows = base.map(e=>{
+    const hrs = e.estado==='recibido'&&e.fechaLlegada ? Math.round(weekdayHours(effectiveStart(e.fecha),new Date(e.fechaLlegada))) : '';
+    return [e.id,e.origen,e.destino,e.fecha?e.fecha.replace('T',' '):'',e.remito,e.tipo,e.modalidad,e.cantidad,e.transporte,e.obs||'',e.estado,e.fechaLlegada?e.fechaLlegada.replace('T',' '):'',e.obsRecv||'',hrs];
+  });
+
+  function csvRow(r){
+    return r.map(function(c){ return '"'+String(c===null||c===undefined?'':c).replace(/"/g,'""')+'"'; }).join(',');
+  }
+  const lines = [csvRow(header)].concat(rows.map(csvRow));
+  const csv   = lines.join('\r\n');
+  const bom   = '\uFEFF';
+  const blob  = new Blob([bom+csv],{type:'text/csv;charset=utf-8'});
+  const url   = URL.createObjectURL(blob);
+  const a     = document.createElement('a');
+  const fecha = new Date().toISOString().slice(0,10);
+  a.href     = url;
+  a.download = 'DistriLogis_Reporte_'+fecha+'.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('CSV exportado');
+}
+
+
+// ═══════════════════════════════════════════
+// MANUAL
+// ═══════════════════════════════════════════
+const MANUAL_ROLE_TABS={admin:['general','admin','ref'],sucursal:['general','depo','ref'],readonly:['general','tv','ref']};
+const MANUAL_TAB_LABELS={general:'📋 General',depo:'🏭 Depósito',admin:'⚙️ Administrador',tv:'📺 TV',ref:'⚡ Referencia'};
+const MANUAL_DEFAULT_TAB={admin:'admin',sucursal:'depo',readonly:'tv'};
+let currentManualTab='general';
+
+function buildManualRoutesTable(){
+  const rows=ROUTE_DEFS.map((def,i)=>{
+    const [nL,aL]=routeThresholds[def.key]||[48,72];
+    return `<tr style="${i%2?'background:#fafbfd':''}"><td><strong>${def.label}</strong></td><td style="color:#15803d">hasta ${nL}h</td><td style="color:#a16207">${nL}–${aL}h</td><td style="color:#be123c">+${aL}h</td></tr>`;
+  }).join('');
+  return `<table><tr><th>Ruta</th><th>✅ Normal</th><th>⚠️ Demorado</th><th>🚨 Alerta</th></tr>${rows}</table>`;
+}
+
+const MANUAL_TABS={
+  general:function(){return `<h2>¿Qué es DistriLogis V4?</h2><p>Sistema de seguimiento de envíos entre depósitos. Registra despachos, hace seguimiento en tiempo real y confirma recepciones, con alertas automáticas según el tiempo en tránsito.</p><h3>Novedades V4</h3><ul><li><strong>🔄 Auto-refresh:</strong> los datos se actualizan automáticamente cada 2 minutos sin necesidad de recargar.</li><li><strong>🔔 Notificaciones:</strong> aparecen avisos en pantalla cuando un envío <strong>cambia</strong> de Normal a Demorado, o de Demorado a Alerta — solo durante la sesión activa.</li><li><strong>📈 Reporte:</strong> resumen por ruta, transporte y tipo con exportación a CSV (solo admin).</li><li><strong>📝 Notas visibles:</strong> las observaciones de envío y recepción se muestran en todas las tablas.</li></ul><h3>Usuarios</h3><table><tr><th>Usuario</th><th>Rol</th><th>Descripción</th></tr><tr><td><code>administrador</code></td><td><span class="badge-ok">Admin</span></td><td>Acceso total. Edita rutas, transportes, revierte recepciones, genera reportes.</td></tr><tr><td><code>pico·mdp·bsas·rosario</code></td><td><span class="badge-blue">Depósito</span></td><td>Ve sus propios envíos. Confirma recepciones de su depósito.</td></tr><tr><td><code>telev</code></td><td><span class="badge-warn">Solo lectura</span></td><td>Vista global sin botones. Ideal para pantalla de monitoreo.</td></tr></table><h3>Alarmas</h3><p>Tiempos en <strong>horas hábiles</strong> (lunes a viernes). Si sale el fin de semana, el cronómetro arranca el <strong>lunes a las 8:00</strong>.</p>${buildManualRoutesTable()}<div class="tip tip-info"><span>💡</span><span>Los tiempos los configura solo el <strong>Administrador</strong> desde Tiempos por Ruta.</span></div>`;},
+  depo:`<h2>Usuario Depósito</h2><p>Usuarios: <code>pico · mdp · bsas · rosario</code></p><h3>Dashboard</h3><p>Muestra envíos con <strong>destino a su depósito</strong>: resumen, alertas, gráfico de torta y tabla de pendientes por urgencia. Los datos se actualizan solos cada 2 minutos.</p><h3>Notificaciones automáticas</h3><p>Aparece un aviso en la esquina superior derecha cuando un envío <strong>cambia</strong> de estado: Normal → Demorado o Demorado → Alerta. No se muestran al entrar — solo cuando ocurre el cambio durante la sesión.</p><h3>Nuevo Envío</h3><p>El <strong>Origen</strong> viene fijo. Todos los campos son obligatorios salvo Observaciones.</p><table><tr><th>Campo</th><th>Notas</th></tr><tr><td>Origen</td><td>Pre-cargado — no editable.</td></tr><tr><td>Destino</td><td>Cualquier otro depósito.</td></tr><tr><td>Fecha y Hora</td><td>Hora real del despacho. No se puede ingresar fecha pasada.</td></tr><tr><td>N° Remito</td><td>Único — no se permiten duplicados.</td></tr><tr><td>Tipo</td><td>Compras, Web o Web + Compras.</td></tr><tr><td>Modalidad</td><td>Cajón, Pallet o Bulto.</td></tr><tr><td>Cantidad</td><td>Por defecto 1.</td></tr><tr><td>Transporte</td><td>Solo los habilitados para el depósito.</td></tr><tr><td>Observaciones</td><td>Opcional — visible en todas las tablas.</td></tr></table><h3>Todos los Envíos</h3><ul><li><strong>📥 Por recibir:</strong> pendientes con destino al depósito, ordenados por urgencia. Muestra las notas del envío.</li><li><strong>🚚 En tránsito:</strong> despachados desde el depósito aún pendientes.</li><li><strong>✅ Historial:</strong> recibidos, con buscador y columnas de notas de envío y recepción.</li></ul><div class="tip tip-info"><span>ℹ️</span><span>Para confirmar llegadas usá la sección <strong>Recepción</strong>.</span></div><h3>Recepción</h3><p>Muestra pendientes con destino al propio depósito. Clic en <strong>✓ Recibir</strong> — la fecha y hora de recepción se captura automáticamente al momento de confirmar. Podés agregar una observación opcional.</p>`,
+  admin:`<h2>Administrador</h2><p>Usuario: <code>administrador</code></p><h3>Todos los Envíos</h3><p>Filtros de Origen y Destino. Las tres secciones en orden:</p><ul><li><strong>📥 Por recibir:</strong> botón Recibir + 🗑 eliminar directo en la tabla.</li><li><strong>🚚 En tránsito:</strong> alertas → demorados → normales. Fecha de salida editable inline. Botón 🗑 para eliminar.</li><li><strong>✅ Historial:</strong> botón <strong>↩ Revertir</strong> y <strong>🗑 Eliminar</strong>. Remito editable inline (clic, Enter para guardar). Columnas de notas de envío y recepción.</li></ul><h3>Recepción</h3><p>El admin puede modificar la fecha y hora de recepción (útil para carga retroactiva). Los depósitos tienen la fecha fija al momento de confirmar.</p><h3>Tiempos por Ruta</h3><p>Desplegables editables + <strong>💾 Guardar cambios</strong>. Se sincroniza con Sheets.</p><h3>Transportes</h3><ul><li><strong>➕ Agregar:</strong> escribí el nombre y Agregar.</li><li>Tildá los transportes habilitados por depósito en el grid.</li><li><strong>💾 Guardar</strong> sincroniza con Sheets.</li></ul><h3>📈 Reporte</h3><p>Resumen del período seleccionable (7, 30, 90 días o todo). Muestra:</p><ul><li>Totales: envíos, recibidos, pendientes, alertas activas y promedio de tránsito.</li><li>Tabla por ruta: total, recibidos y tiempo promedio.</li><li>Tabla por transporte: total y recibidos.</li><li>Tabla por tipo: Compras, Web, Web + Compras.</li></ul><p>Botón <strong>⬇ Exportar CSV</strong> descarga todos los envíos del período con todos los campos, listo para abrir en Excel.</p><div class="tip tip-info"><span>💡</span><span>El CSV incluye las horas hábiles de tránsito calculadas para cada envío recibido.</span></div>`,
+  tv:`<h2>TV — Solo Lectura</h2><p>Usuario: <code>telev</code></p><div class="tip tip-purple"><span>📺</span><span>Para pantallas de monitoreo permanente — sin riesgo de modificaciones. Los datos se actualizan automáticamente cada 2 minutos.</span></div><h3>Acceso</h3><table><tr><th>Sección</th><th>Acceso</th></tr><tr><td>Dashboard</td><td><span class="badge-ok">✅</span> Con auto-refresh</td></tr><tr><td>Todos los Envíos</td><td><span class="badge-ok">✅</span> Sin botones</td></tr><tr><td>Tiempos por Ruta</td><td><span class="badge-ok">✅</span> Solo lectura</td></tr><tr><td>Nuevo Envío</td><td><span class="badge-alert">🚫</span></td></tr><tr><td>Recepción</td><td><span class="badge-alert">🚫</span></td></tr><tr><td>Transportes</td><td><span class="badge-alert">🚫</span></td></tr><tr><td>Reporte</td><td><span class="badge-alert">🚫</span></td></tr></table>`,
+  ref:`<h2>Referencia Rápida</h2><h3>Usuarios</h3><table><tr><th>Usuario</th><th>Tipo</th></tr><tr><td><code>administrador</code></td><td>Admin</td></tr><tr><td><code>pico</code></td><td>Pico</td></tr><tr><td><code>mdp</code></td><td>MDP</td></tr><tr><td><code>bsas</code></td><td>Bs As</td></tr><tr><td><code>rosario</code></td><td>Rosario</td></tr><tr><td><code>telev</code></td><td>Solo lectura</td></tr></table><h3>Estados</h3><table><tr><td><span class="badge-ok">✅ Normal</span></td><td>Dentro del tiempo esperado.</td></tr><tr><td><span class="badge-warn">⚠️ Demorado</span></td><td>Superó el tiempo normal.</td></tr><tr><td><span class="badge-alert">🚨 Alerta</span></td><td>Tiempo crítico — atención inmediata.</td></tr></table><h3>Auto-refresh</h3><p>Los datos se actualizan cada <strong>2 minutos</strong> automáticamente. El ícono ↻ girando en el menú lateral indica que está actualizando.</p><h3>Notificaciones</h3><p>Aparecen en la esquina superior derecha cuando un envío <strong>cambia</strong> de Normal → Demorado (naranja) o Demorado → Alerta (rojo). Solo se disparan durante la sesión activa, no al hacer login. Clic en ✕ para cerrarlas.</p><h3>FAQ</h3><p><strong>¿Por qué no veo botón Recibir como depósito?</strong><br>Los depósitos confirman desde la sección <strong>Recepción</strong>. El admin tiene el botón directo en la tabla.</p><p><strong>¿Un envío del viernes sigue en 0h el lunes?</strong><br>El cronómetro solo cuenta horas hábiles. Retoma el lunes a las 8:00.</p><p><strong>¿Cómo corrijo una recepción confirmada por error?</strong><br>Admin → Historial → botón <strong>↩</strong>.</p><p><strong>¿Cómo exporto los datos?</strong><br>Admin → Reporte → seleccioná el período → <strong>⬇ Exportar CSV</strong>.</p><p><strong>¿Los datos se sincronizan entre PCs?</strong><br>Sí. Al hacer login se bajan todos los datos de Sheets. El auto-refresh mantiene todo actualizado cada 2 minutos.</p><div class="tip tip-info"><span>💡</span><span>Si el badge rojo persiste, clic en <strong>🔍 Diagnosticar conexión</strong> para ver el error exacto.</span></div>`
+};
+
+function openManual(){
+  const role=currentUser?.role||'readonly';
+  const tabs=MANUAL_ROLE_TABS[role]||['general','ref'];
+  const defaultTab=MANUAL_DEFAULT_TAB[role]||'general';
+  currentManualTab=defaultTab;
+  document.getElementById('manual-tabs-bar').innerHTML=tabs.map(t=>`<button class="mtab${t===defaultTab?' active':''}" onclick="switchTab('${t}')">${MANUAL_TAB_LABELS[t]}</button>`).join('');
+  renderManualTab(defaultTab);
+  document.getElementById('mo-manual').classList.add('open');
+}
+function closeManual(){ document.getElementById('mo-manual').classList.remove('open'); }
+function switchTab(tab){ currentManualTab=tab; renderManualTab(tab); }
+function renderManualTab(tab){
+  document.querySelectorAll('#manual-tabs-bar .mtab').forEach(b=>b.classList.toggle('active',b.getAttribute('onclick')===`switchTab('${tab}')`));
+  const content=MANUAL_TABS[tab];
+  document.getElementById('manual-content').innerHTML=(typeof content==='function'?content():content)||'';
+  document.getElementById('manual-content').scrollTop=0;
+}
+
+// ═══════════════════════════════════════════
+// SISTEMA — control de versiones (solo admin)
+// ═══════════════════════════════════════════
+async function renderSistema(){
+  if(currentUser.role !== 'admin') return;
+  const el = document.getElementById('sistema-content');
+  el.innerHTML = `<div class="card" style="max-width:580px">
+    <div style="font-size:.72rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:14px">🔒 Control de versiones</div>
+    <div id="sys-loading" style="color:var(--text3);font-size:.82rem;padding:8px 0">Consultando servidor...</div>
+    <div id="sys-body" style="display:none">
+      <div class="stat-grid" style="margin-bottom:16px">
+        <div class="stat blue"><div class="sl">Este HTML</div><div class="sv" style="font-size:1.2rem;font-family:'JetBrains Mono',monospace" id="sys-current"></div><div class="sd">versión de este archivo</div></div>
+        <div class="stat ok"><div class="sl">Deployada</div><div class="sv" style="font-size:1.2rem;font-family:'JetBrains Mono',monospace" id="sys-deployed"></div><div class="sd">último deploy registrado</div></div>
+        <div class="stat warn"><div class="sl">Mínima requerida</div><div class="sv" style="font-size:1.2rem;font-family:'JetBrains Mono',monospace" id="sys-min"></div><div class="sd">bloquea versiones anteriores</div></div>
+      </div>
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:16px">
+        <div style="font-size:.75rem;font-weight:700;color:var(--text2);margin-bottom:8px">📋 Versiones en circulación</div>
+        <div id="sys-history"></div>
+      </div>
+      <div style="background:var(--warn-lt);border:1px solid #fde68a;border-radius:10px;padding:14px">
+        <div style="font-size:.75rem;font-weight:700;color:var(--warn);margin-bottom:6px">⚠️ Cambiar versión mínima requerida</div>
+        <div style="font-size:.75rem;color:#92400e;margin-bottom:10px">Los usuarios con HTML más viejo que este número <strong>no podrán loguearse</strong>.</div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <input type="text" id="sys-new-min" style="width:150px;padding:8px 10px;border:1.5px solid #fde68a;border-radius:8px;font-size:.85rem;font-family:'JetBrains Mono',monospace;outline:none;background:#fff" placeholder="ej: 20260404.1132"/>
+          <button class="btn bs" onclick="saveMinVersion()">💾 Guardar</button>
+          <span id="sys-save-msg" style="font-size:.75rem;color:var(--ok);display:none">✅ Guardado</span>
+        </div>
+      </div>
+    </div>
+    <div id="sys-gas-warning" style="display:none;margin-top:14px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:14px">
+      <div style="font-size:.75rem;font-weight:700;color:#1e40af;margin-bottom:6px">ℹ️ GAS pendiente de actualización</div>
+      <div style="font-size:.75rem;color:#1e40af;line-height:1.6">
+        El servidor todavía corre el GAS V4. Para activar el control de versiones completo,<br>
+        deployá el archivo <code style="background:#dbeafe;padding:1px 5px;border-radius:4px">DistriLogis_V5_GAS.js</code> en Google Apps Script.
+      </div>
+    </div>
+  </div>`;
+
+  // Siempre mostramos la versión local inmediatamente
+  document.getElementById('sys-current').textContent = APP_VERSION;
+
+  // Normaliza versiones que Sheets pudo haber guardado sin punto
+  // (ej: "202604041132" → "20260404.1132")
+  function fmtV(v){
+    const s = String(v||'').trim();
+    if(s.length === 12 && !s.includes('.')) return s.slice(0,8)+'.'+s.slice(8);
+    return s || '—';
+  }
+
+  try {
+    const res = await gasPost('getSystemInfo', {});
+
+    if(res && res.ok && res.data){
+      // GAS V5 activo — mostrar todo
+      const d = res.data;
+      document.getElementById('sys-deployed').textContent = fmtV(d.deployedVersion);
+      document.getElementById('sys-min').textContent      = fmtV(d.minVersion);
+      document.getElementById('sys-new-min').value        = fmtV(d.minVersion) !== '—' ? fmtV(d.minVersion) : APP_VERSION;
+      const hist = (d.versionHistory || '').split(',').map(s=>s.trim()).filter(Boolean);
+      document.getElementById('sys-history').innerHTML = hist.length
+        ? hist.map(v=>`<span style="display:inline-block;padding:2px 8px;background:#e8eaf6;color:#3949ab;border-radius:6px;margin:2px;font-size:.72rem;font-family:'JetBrains Mono',monospace">${v}</span>`).join('')
+        : '<span style="color:var(--text3);font-size:.78rem">Sin historial aún — se registra automáticamente con cada login</span>';
+    } else {
+      // GAS V4 — mostrar info local + aviso de deploy pendiente
+      document.getElementById('sys-deployed').textContent = APP_VERSION + ' (local)';
+      document.getElementById('sys-min').textContent      = '—';
+      document.getElementById('sys-new-min').value        = APP_VERSION;
+      document.getElementById('sys-history').innerHTML    = `<span style="color:var(--text3);font-size:.78rem">Disponible después de deployar GAS V5</span>`;
+      document.getElementById('sys-gas-warning').style.display = 'block';
+    }
+  } catch(e){
+    // Error de red — igual mostramos lo que podemos
+    document.getElementById('sys-deployed').textContent = '—';
+    document.getElementById('sys-min').textContent      = '—';
+    document.getElementById('sys-history').innerHTML    = `<span style="color:var(--text3);font-size:.78rem">Sin conexión al servidor</span>`;
+    console.warn('[renderSistema]', e.message);
+  }
+
+  document.getElementById('sys-loading').style.display = 'none';
+  document.getElementById('sys-body').style.display    = 'block';
+}
+
+async function saveMinVersion(){
+  const val = parseFloat(document.getElementById('sys-new-min').value);
+  if(!val || val < 1){ toast('⚠ Ingresá un número válido'); return; }
+  const msg = document.getElementById('sys-save-msg');
+  msg.style.display = 'none';
+  const res = await gasSend('setMinVersion', { minVersion: String(val) });
+  if(res && res.ok){
+    msg.style.display = 'inline';
+    setTimeout(() => renderSistema(), 800); // refrescar para mostrar nuevo valor
+  }
+}
+
+// ═══════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════
+document.addEventListener('DOMContentLoaded',()=>{
+  // ⚠️ loadState() ya NO va acá — se llama dentro de doLogin()
+  // con el usuario correcto, después de validar credenciales.
+  document.getElementById('mo-manual').addEventListener('click',e=>{ if(e.target.id==='mo-manual') closeManual(); });
+  const lastUser=localStorage.getItem('dl_last_user');
+  if(lastUser){ const sel=document.getElementById('login-user'); if(sel) sel.value=lastUser; }
+});
+
+// ═══════════════════════════════════════════
+// DATOS SEMILLA — DEPRECADO en V5
+// ═══════════════════════════════════════════
+// Los seeds fueron eliminados como fuente de verdad.
+// La única fuente es el Sheet via GAS. Si no hay conexión en el login,
+// el sistema no permite el acceso (ver doLogin).
+// Esta función retorna array vacío para no romper referencias legacy.
+function buildSeed(){
+  console.warn('[DistriLogis V5] buildSeed() llamado — los seeds están deprecados. La fuente de verdad es el Sheet.');
+  return [];
+}
+</script>
+</body>
+</html>
