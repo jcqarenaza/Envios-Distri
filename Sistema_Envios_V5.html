@@ -1208,18 +1208,32 @@ function buildPie(dep,all){
   const pcts=[a/total,w/total,ok/total];
   const cols=['var(--alert)','var(--warn)','var(--ok)'];
   const labels=['Alerta','Demorado','Normal'];
-  let cum=0;
-  const slices=pcts.map((p,i)=>{
-    if(p<=0) return '';
-    const s=cum*360, e=(cum+p)*360; cum+=p;
-    const r1=Math.PI*s/180, r2=Math.PI*e/180;
-    const x1=50+40*Math.sin(r1),y1=50-40*Math.cos(r1);
-    const x2=50+40*Math.sin(r2),y2=50-40*Math.cos(r2);
-    const lg=p>0.5?1:0;
-    return `<path d="M50,50 L${x1},${y1} A40,40 0 ${lg},1 ${x2},${y2} Z" fill="${cols[i]}" opacity=".85"/>`;
-  }).join('');
+
+  let svgContent;
+  if(!items.length){
+    svgContent = '<circle cx="50" cy="50" r="40" fill="var(--ok)" opacity=".3"/>';
+  } else {
+    const activeSegments = pcts.filter(p=>p>0).length;
+    if(activeSegments === 1){
+      // Un solo color — círculo sólido (evita bug del arco de 360°)
+      const col = cols[pcts.findIndex(p=>p>0)];
+      svgContent = `<circle cx="50" cy="50" r="40" fill="${col}" opacity=".85"/>`;
+    } else {
+      let cum=0;
+      svgContent = pcts.map((p,i)=>{
+        if(p<=0) return '';
+        const s=cum*360, e=(cum+p)*360; cum+=p;
+        const r1=Math.PI*s/180, r2=Math.PI*e/180;
+        const x1=50+40*Math.sin(r1),y1=50-40*Math.cos(r1);
+        const x2=50+40*Math.sin(r2),y2=50-40*Math.cos(r2);
+        const lg=p>0.5?1:0;
+        return `<path d="M50,50 L${x1},${y1} A40,40 0 ${lg},1 ${x2},${y2} Z" fill="${cols[i]}" opacity=".85"/>`;
+      }).join('');
+    }
+  }
+
   const legend=labels.map((l,i)=>`<div style="display:flex;align-items:center;gap:4px;font-size:.65rem;color:var(--text2)"><div style="width:8px;height:8px;border-radius:50%;background:${cols[i]}"></div>${l}: ${[a,w,ok][i]}</div>`).join('');
-  return `<div class="pie-card"><div class="pie-title">🏭 ${dep}</div><svg viewBox="0 0 100 100" width="90" height="90">${items.length?slices:'<circle cx="50" cy="50" r="40" fill="var(--ok)" opacity=".3"/>'}</svg><div style="font-size:.75rem;font-weight:700;color:var(--text);margin:4px 0">${items.length} pendiente${items.length!==1?'s':''}</div><div style="display:flex;flex-direction:column;gap:2px;align-items:flex-start">${legend}</div></div>`;
+  return `<div class="pie-card"><div class="pie-title">🏭 ${dep}</div><svg viewBox="0 0 100 100" width="90" height="90">${svgContent}</svg><div style="font-size:.75rem;font-weight:700;color:var(--text);margin:4px 0">${items.length} pendiente${items.length!==1?'s':''}</div><div style="display:flex;flex-direction:column;gap:2px;align-items:flex-start">${legend}</div></div>`;
 }
 
 function buildAvgStats(filterDepot){
