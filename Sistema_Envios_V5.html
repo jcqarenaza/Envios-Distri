@@ -458,7 +458,8 @@ tr.row-warn{background:rgba(217,119,6,.04)}
         <div style="display:flex;gap:8px;align-items:center">
           <input type="text" id="gbl-search" placeholder="Remito, depósito, transporte, tipo..." autofocus
             style="flex:1;padding:10px 14px;border:1.5px solid var(--border);border-radius:10px;font-size:.9rem;font-family:inherit;outline:none;transition:border .15s"
-            oninput="renderBusqueda()" onkeydown="if(event.key==='Escape')document.getElementById('gbl-search').value='';renderBusqueda()"/>
+            oninput="renderBusqueda()"
+            onkeydown="if(event.key==='Escape'){document.getElementById('gbl-search').value='';renderBusqueda();}"/>
           <button class="btn bg" onclick="document.getElementById('gbl-search').value='';renderBusqueda()">✕</button>
         </div>
       </div>
@@ -556,7 +557,7 @@ tr.row-warn{background:rgba(217,119,6,.04)}
 // ═══════════════════════════════════════════
 // CONSTANTES
 // ═══════════════════════════════════════════
-const APP_VERSION = '20260415.1923'; // ← generado automáticamente por Claude al crear el archivo (YYYYMMDD.HHMM)
+const APP_VERSION = '20260415.1925'; // ← generado automáticamente por Claude al crear el archivo (YYYYMMDD.HHMM)
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbwNrWxDXyTFhtRMDkkTZl5_lN1fglUajnTuIlfpZEMknW9FPwXyzMnwcGAANaI53s0j/exec';
 const DEPOTS  = ['Pico','MDP','Bs As','Rosario'];
 const ROUTE_DEFS = [
@@ -839,7 +840,7 @@ const USERS_META = {
 const NAV_ITEMS = {
   admin:    [{id:'dashboard',icon:'📊',label:'Dashboard'},{id:'alta',icon:'➕',label:'Nuevo Envío'},{id:'envios',icon:'📦',label:'Todos los Envíos'},{id:'recepcion',icon:'📥',label:'Recepción'},{id:'rutas',icon:'🗺️',label:'Tiempos por Ruta'},{id:'transportes',icon:'🚛',label:'Transportes'},{id:'reporte',icon:'📈',label:'Reporte'},{id:'sistema',icon:'⚙️',label:'Sistema'},{id:'busqueda',icon:'🔍',label:'Búsqueda'}],
   sucursal: [{id:'dashboard',icon:'📊',label:'Dashboard'},{id:'alta',icon:'➕',label:'Nuevo Envío'},{id:'envios',icon:'📦',label:'Todos los Envíos'},{id:'recepcion',icon:'📥',label:'Recepción'},{id:'rutas',icon:'🗺️',label:'Tiempos por Ruta'},{id:'busqueda',icon:'🔍',label:'Búsqueda'}],
-  readonly: [{id:'dashboard',icon:'📊',label:'Dashboard'},{id:'envios',icon:'📦',label:'Todos los Envíos'},{id:'rutas',icon:'🗺️',label:'Tiempos por Ruta'}],
+  readonly: [{id:'dashboard',icon:'📊',label:'Dashboard'},{id:'envios',icon:'📦',label:'Todos los Envíos'},{id:'rutas',icon:'🗺️',label:'Tiempos por Ruta'},{id:'busqueda',icon:'🔍',label:'Búsqueda'}],
 };
 
 let currentUser = null;
@@ -1112,7 +1113,10 @@ function show(viewId){
   if(viewId==='rutas')        renderRoutes();
   if(viewId==='transportes')  renderTransportesView();
   if(viewId==='sistema')      renderSistema();
-  if(viewId==='busqueda')     renderBusqueda();
+  if(viewId==='busqueda'){
+    renderBusqueda();
+    setTimeout(()=>{ const inp=document.getElementById('gbl-search'); if(inp) inp.focus(); }, 50);
+  }
   if(viewId==='reporte')      renderReporte();
 }
 
