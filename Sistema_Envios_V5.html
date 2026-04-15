@@ -229,7 +229,9 @@ tr.row-warn{background:rgba(217,119,6,.04)}
 .rpt-period{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
 .rpt-period select,.rpt-period input{padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:.8rem;font-family:inherit;outline:none;background:var(--surface)}
 .rpt-period select:focus,.rpt-period input:focus{border-color:var(--blue-md)}
-/* ─── RESPONSIVE ─── */
+#tv-overlay ::selection{ background:#f59e0b; color:#0f172a; }
+#tv-overlay { color: #fff; }
+#tv-overlay td, #tv-overlay th, #tv-overlay span, #tv-overlay div { color: inherit; }
 @media(max-width:768px){.sidebar{display:none}.main{padding:14px}.fg{grid-template-columns:1fr}}
 </style>
 </head>
@@ -491,7 +493,7 @@ tr.row-warn{background:rgba(217,119,6,.04)}
   </div><!-- /main -->
 
   <!-- MODO TV (pantalla completa oscura) -->
-  <div id="tv-overlay" style="display:none;position:fixed;inset:0;background:#0f172a;z-index:9000;overflow:auto;padding:24px">
+  <div id="tv-overlay" style="display:none;position:fixed;inset:0;background:#0f172a;z-index:9000;overflow:auto;padding:24px;color:#fff">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
       <div style="color:#f59e0b;font-size:1.4rem;font-weight:800">🚚 DistriLogis — Monitor en tiempo real</div>
       <div style="display:flex;gap:12px;align-items:center">
@@ -554,7 +556,7 @@ tr.row-warn{background:rgba(217,119,6,.04)}
 // ═══════════════════════════════════════════
 // CONSTANTES
 // ═══════════════════════════════════════════
-const APP_VERSION = '20260415.1855'; // ← generado automáticamente por Claude al crear el archivo (YYYYMMDD.HHMM)
+const APP_VERSION = '20260415.1923'; // ← generado automáticamente por Claude al crear el archivo (YYYYMMDD.HHMM)
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbwNrWxDXyTFhtRMDkkTZl5_lN1fglUajnTuIlfpZEMknW9FPwXyzMnwcGAANaI53s0j/exec';
 const DEPOTS  = ['Pico','MDP','Bs As','Rosario'];
 const ROUTE_DEFS = [
@@ -2279,11 +2281,11 @@ function renderTV(){
       const estTxt=est?fmtDT(est.estimado.toISOString()):'—';
       return `<tr style="border-bottom:1px solid rgba(255,255,255,.07)">
         <td style="padding:10px 12px;color:${col};font-weight:700;font-size:.95rem;font-family:'JetBrains Mono',monospace">${fmtH(hrs)}</td>
-        <td style="padding:10px 12px;color:rgba(255,255,255,.8);font-size:.85rem"><span style="background:rgba(255,255,255,.1);padding:2px 8px;border-radius:6px">${e.origen}</span></td>
-        <td style="padding:10px 12px;color:rgba(255,255,255,.9);font-family:'JetBrains Mono',monospace;font-size:.85rem">${e.remito}</td>
-        <td style="padding:10px 12px;font-size:.85rem">${modIcon[e.modalidad]||'📫'} ${e.modalidad||'—'} ${e.cantidad?'×'+e.cantidad:''}</td>
-        <td style="padding:10px 12px;color:rgba(255,255,255,.6);font-size:.78rem">${e.transporte||'—'}</td>
-        <td style="padding:10px 12px;color:rgba(255,255,255,.5);font-size:.75rem">${estTxt}</td>
+        <td style="padding:10px 12px;color:rgba(255,255,255,.85);font-size:.85rem"><span style="background:rgba(255,255,255,.12);color:#fff;padding:2px 8px;border-radius:6px">${e.origen}</span></td>
+        <td style="padding:10px 12px;color:#fff;font-family:'JetBrains Mono',monospace;font-size:.85rem">${e.remito}</td>
+        <td style="padding:10px 12px;color:rgba(255,255,255,.9);font-size:.85rem">${modIcon[e.modalidad]||'📫'} ${e.modalidad||'—'} ${e.cantidad?'×'+e.cantidad:''}</td>
+        <td style="padding:10px 12px;color:rgba(255,255,255,.7);font-size:.78rem">${e.transporte||'—'}</td>
+        <td style="padding:10px 12px;color:rgba(255,255,255,.6);font-size:.75rem">${estTxt}</td>
       </tr>`;
     }).join('');
 
@@ -2304,7 +2306,7 @@ function renderTV(){
           <th style="padding:8px 12px;text-align:left;font-size:.65rem;color:rgba(255,255,255,.35);text-transform:uppercase">Est. llegada</th>
         </tr></thead>
         <tbody>${rows}</tbody>
-      </table>`:`<div style="padding:24px;text-align:center;color:rgba(255,255,255,.3);font-size:.85rem">✅ Sin pendientes</div>`}
+      </table>`:`<div style="padding:24px;text-align:center;color:rgba(255,255,255,.5);font-size:.85rem">✅ Sin pendientes</div>`}
     </div>`;
   }).join('');
 
