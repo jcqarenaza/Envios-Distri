@@ -284,6 +284,7 @@ tr.row-warn{background:rgba(217,119,6,.04)}
       </div>
       <div id="refresh-indicator"><span class="spin">↻</span><span>Actualizando...</span></div>
       <button class="manual-btn" onclick="openManual()"><span>📄</span><span>Manual de Usuario</span></button>
+      <button class="manual-btn" onclick="openTVMode()" id="btn-tv" style="display:none"><span>📺</span><span>Modo TV</span></button>
       <button class="logout-btn" onclick="logout()">← Cerrar sesión</button>
     </div>
   </div>
@@ -373,7 +374,7 @@ tr.row-warn{background:rgba(217,119,6,.04)}
           <span class="env-sec-badge" id="sec-recv-badge"></span>
         </div>
         <div class="card" style="padding:0;overflow:hidden"><div class="tw"><table>
-          <thead><tr><th>Estado</th><th>Salida</th><th>Horas</th><th>Origen</th><th>Destino</th><th>Remito</th><th>Tipo</th><th>Bulto</th><th>Transporte</th><th>Notas</th><th id="th-acciones3" style="width:130px"></th></tr></thead>
+          <thead><tr><th>Estado</th><th>Salida</th><th>Horas</th><th>Origen</th><th>Destino</th><th>Remito</th><th>Tipo</th><th>Bulto</th><th>Transporte</th><th>Notas</th><th>Est. llegada</th><th id="th-acciones3" style="width:130px"></th></tr></thead>
           <tbody id="tb-por-recibir"></tbody>
         </table></div></div>
       </div>
@@ -385,7 +386,7 @@ tr.row-warn{background:rgba(217,119,6,.04)}
           <span class="env-sec-badge" id="sec-desp-badge"></span>
         </div>
         <div class="card" style="padding:0;overflow:hidden"><div class="tw"><table>
-          <thead><tr><th>Estado</th><th>Salida</th><th>Horas</th><th>Origen</th><th>Destino</th><th>Remito</th><th>Tipo</th><th>Bulto</th><th>Transporte</th><th>Notas</th><th id="th-acciones" style="width:130px"></th></tr></thead>
+          <thead><tr><th>Estado</th><th>Salida</th><th>Horas</th><th>Origen</th><th>Destino</th><th>Remito</th><th>Tipo</th><th>Bulto</th><th>Transporte</th><th>Notas</th><th>Est. llegada</th><th id="th-acciones" style="width:130px"></th></tr></thead>
           <tbody id="tb-despachos"></tbody>
         </table></div></div>
       </div>
@@ -448,6 +449,20 @@ tr.row-warn{background:rgba(217,119,6,.04)}
       <div id="sistema-content"></div>
     </div>
 
+    <!-- BÚSQUEDA GLOBAL -->
+    <div id="view-busqueda" class="view">
+      <div class="ph"><div class="ph-left"><div class="pt">🔍 Búsqueda</div><div class="ps">Encontrá cualquier envío por remito, origen, destino o transporte</div></div></div>
+      <div class="card" style="margin-bottom:16px">
+        <div style="display:flex;gap:8px;align-items:center">
+          <input type="text" id="gbl-search" placeholder="Remito, depósito, transporte, tipo..." autofocus
+            style="flex:1;padding:10px 14px;border:1.5px solid var(--border);border-radius:10px;font-size:.9rem;font-family:inherit;outline:none;transition:border .15s"
+            oninput="renderBusqueda()" onkeydown="if(event.key==='Escape')document.getElementById('gbl-search').value='';renderBusqueda()"/>
+          <button class="btn bg" onclick="document.getElementById('gbl-search').value='';renderBusqueda()">✕</button>
+        </div>
+      </div>
+      <div id="gbl-results"></div>
+    </div>
+
     <!-- REPORTE -->
     <div id="view-reporte" class="view">
       <div class="ph">
@@ -474,6 +489,18 @@ tr.row-warn{background:rgba(217,119,6,.04)}
     </div>
 
   </div><!-- /main -->
+
+  <!-- MODO TV (pantalla completa oscura) -->
+  <div id="tv-overlay" style="display:none;position:fixed;inset:0;background:#0f172a;z-index:9000;overflow:auto;padding:24px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+      <div style="color:#f59e0b;font-size:1.4rem;font-weight:800">🚚 DistriLogis — Monitor en tiempo real</div>
+      <div style="display:flex;gap:12px;align-items:center">
+        <span id="tv-clock" style="color:rgba(255,255,255,.6);font-size:.9rem;font-family:'JetBrains Mono',monospace"></span>
+        <button onclick="closeTVMode()" style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:#fff;padding:8px 16px;border-radius:8px;cursor:pointer;font-family:inherit;font-size:.8rem">✕ Salir</button>
+      </div>
+    </div>
+    <div id="tv-content"></div>
+  </div>
 </div><!-- /app -->
 
 <!-- MODAL RECEPCIÓN -->
@@ -527,7 +554,7 @@ tr.row-warn{background:rgba(217,119,6,.04)}
 // ═══════════════════════════════════════════
 // CONSTANTES
 // ═══════════════════════════════════════════
-const APP_VERSION = '20260404.1132'; // ← generado automáticamente por Claude al crear el archivo (YYYYMMDD.HHMM)
+const APP_VERSION = '20260415.1855'; // ← generado automáticamente por Claude al crear el archivo (YYYYMMDD.HHMM)
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbwNrWxDXyTFhtRMDkkTZl5_lN1fglUajnTuIlfpZEMknW9FPwXyzMnwcGAANaI53s0j/exec';
 const DEPOTS  = ['Pico','MDP','Bs As','Rosario'];
 const ROUTE_DEFS = [
@@ -808,8 +835,8 @@ const USERS_META = {
 };
 
 const NAV_ITEMS = {
-  admin:    [{id:'dashboard',icon:'📊',label:'Dashboard'},{id:'alta',icon:'➕',label:'Nuevo Envío'},{id:'envios',icon:'📦',label:'Todos los Envíos'},{id:'recepcion',icon:'📥',label:'Recepción'},{id:'rutas',icon:'🗺️',label:'Tiempos por Ruta'},{id:'transportes',icon:'🚛',label:'Transportes'},{id:'reporte',icon:'📈',label:'Reporte'},{id:'sistema',icon:'⚙️',label:'Sistema'}],
-  sucursal: [{id:'dashboard',icon:'📊',label:'Dashboard'},{id:'alta',icon:'➕',label:'Nuevo Envío'},{id:'envios',icon:'📦',label:'Todos los Envíos'},{id:'recepcion',icon:'📥',label:'Recepción'},{id:'rutas',icon:'🗺️',label:'Tiempos por Ruta'}],
+  admin:    [{id:'dashboard',icon:'📊',label:'Dashboard'},{id:'alta',icon:'➕',label:'Nuevo Envío'},{id:'envios',icon:'📦',label:'Todos los Envíos'},{id:'recepcion',icon:'📥',label:'Recepción'},{id:'rutas',icon:'🗺️',label:'Tiempos por Ruta'},{id:'transportes',icon:'🚛',label:'Transportes'},{id:'reporte',icon:'📈',label:'Reporte'},{id:'sistema',icon:'⚙️',label:'Sistema'},{id:'busqueda',icon:'🔍',label:'Búsqueda'}],
+  sucursal: [{id:'dashboard',icon:'📊',label:'Dashboard'},{id:'alta',icon:'➕',label:'Nuevo Envío'},{id:'envios',icon:'📦',label:'Todos los Envíos'},{id:'recepcion',icon:'📥',label:'Recepción'},{id:'rutas',icon:'🗺️',label:'Tiempos por Ruta'},{id:'busqueda',icon:'🔍',label:'Búsqueda'}],
   readonly: [{id:'dashboard',icon:'📊',label:'Dashboard'},{id:'envios',icon:'📦',label:'Todos los Envíos'},{id:'rutas',icon:'🗺️',label:'Tiempos por Ruta'}],
 };
 
@@ -1054,8 +1081,10 @@ function startApp(){
   updSyncBadge();
   setTimeout(flushSyncQueue, 2000);
   startAutoRefresh();
-  // Inicializar snapshot de estados al login (sin notificar)
   setTimeout(checkNotifications, 2000);
+  // Mostrar botón TV para admin y readonly
+  const btnTV = document.getElementById('btn-tv');
+  if(btnTV) btnTV.style.display = (u.role==='admin'||u.role==='readonly') ? '' : 'none';
 }
 
 function logout(){
@@ -1081,6 +1110,7 @@ function show(viewId){
   if(viewId==='rutas')        renderRoutes();
   if(viewId==='transportes')  renderTransportesView();
   if(viewId==='sistema')      renderSistema();
+  if(viewId==='busqueda')     renderBusqueda();
   if(viewId==='reporte')      renderReporte();
 }
 
@@ -1134,8 +1164,11 @@ function prog(hrs,nL,aL,status){
 }
 function dlConfirm(title,msg,onOk){
   document.getElementById('mc-title').textContent=title;
-  document.getElementById('mc-msg').textContent=msg;
-  document.getElementById('mc-ok').onclick=()=>{ document.getElementById('mo-confirm').classList.remove('open'); onOk(); };
+  document.getElementById('mc-msg').innerHTML=msg;
+  const okBtn=document.getElementById('mc-ok');
+  okBtn.style.display='';
+  okBtn.textContent='Confirmar';
+  okBtn.onclick=()=>{ document.getElementById('mo-confirm').classList.remove('open'); onOk(); };
   document.getElementById('mo-confirm').classList.add('open');
 }
 function dlConfirmCancel(){ document.getElementById('mo-confirm').classList.remove('open'); }
@@ -1350,8 +1383,8 @@ function renderEnvios(){
     const modColor={'Cajón':'#dbeafe,#1e40af','Pallet':'#fef9c3,#854d0e','Bulto':'#dcfce7,#166534'};
     const modBadgeFn=(mod,cant)=>{const [bg,co]=(modColor[mod]||'#f1f5f9,#475569').split(',');return mod?`<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:6px;font-size:.72rem;font-weight:700;background:${bg};color:${co}">${modIcon[mod]||'📫'} ${mod}${cant?' ×'+cant:''}</span>`:'<span style="color:var(--text3)">—</span>';};
     const tipoBadgeFn=(t)=>t?`<span class="chip" style="background:#ede9fe;color:#6d28d9">${t}</span>`:'<span style="color:var(--text3)">—</span>';
-    return `<tr class="${rCls(status)}"><td>${sBadge(status)}</td><td>${fmtDT(e.fecha)}</td><td class="mono" style="font-weight:700;color:${col}">${fmtH(hrs)}</td><td><span class="chip">${e.origen}</span></td><td><span class="chip">${e.destino}</span></td>${remitoCell(e)}<td>${tipoBadgeFn(e.tipo)}</td><td>${modBadgeFn(e.modalidad,e.cantidad)}</td><td>${e.transporte||'—'}</td>${notaE}${isAdmin?`<td style="display:flex;gap:4px"><button class="btn bs bsm" onclick="openModal('${e.id}')">Recibir</button>${!e.isSeed?`<button class="btn bg bsm" onclick="delEnvio('${e.id}')" title="Eliminar">🗑</button>`:`<button class="btn bsm" style="background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0" onclick="delSeed('${e.id}')" title="Ocultar">🗑</button>`}</td>`:'<td></td>'}</tr>`;
-  }).join(''):emptyR2(11);
+    return `<tr class="${rCls(status)}"><td>${sBadge(status)}</td><td>${fmtDT(e.fecha)}</td><td class="mono" style="font-weight:700;color:${col}">${fmtH(hrs)}</td><td><span class="chip">${e.origen}</span></td><td><span class="chip">${e.destino}</span></td>${remitoCell(e)}<td>${tipoBadgeFn(e.tipo)}</td><td>${modBadgeFn(e.modalidad,e.cantidad)}</td><td>${e.transporte||'—'}</td>${notaE}<td>${fmtEstimado(e)}</td>${isAdmin?`<td style="display:flex;gap:4px"><button class="btn bs bsm" onclick="openModal('${e.id}')">Recibir</button><button class="btn bg bsm" onclick="showHistorialEnvio('${e.id}')" title="Historial">📋</button>${!e.isSeed?`<button class="btn bg bsm" onclick="delEnvio('${e.id}')" title="Eliminar">🗑</button>`:`<button class="btn bsm" style="background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0" onclick="delSeed('${e.id}')" title="Ocultar">🗑</button>`}</td>`:'<td></td>'}</tr>`;
+  }).join(''):emptyR2(12);
 
   // Sección en tránsito
   const despPend=isSuc?pendientes.filter(e=>e.origen===depot):pendientes;
@@ -1369,8 +1402,8 @@ function renderEnvios(){
     const modColor={'Cajón':'#dbeafe,#1e40af','Pallet':'#fef9c3,#854d0e','Bulto':'#dcfce7,#166534'};
     const modBadgeFn=(mod,cant)=>{const [bg,co]=(modColor[mod]||'#f1f5f9,#475569').split(',');return mod?`<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:6px;font-size:.72rem;font-weight:700;background:${bg};color:${co}">${modIcon[mod]||'📫'} ${mod}${cant?' ×'+cant:''}</span>`:'<span style="color:var(--text3)">—</span>';};
     const tipoBadgeFn=(t)=>t?`<span class="chip" style="background:#ede9fe;color:#6d28d9">${t}</span>`:'<span style="color:var(--text3)">—</span>';
-    return `<tr class="${rCls(status)}"><td>${sBadge(status)}</td><td>${isAdmin?`<input type="datetime-local" value="${e.fecha?e.fecha.slice(0,16):''}" onchange="editFechaDespacho('${e.id}',this.value)" style="font-size:.74rem;border:1px solid var(--border);border-radius:6px;padding:3px 6px;font-family:inherit">`:fmtDT(e.fecha)}</td><td class="mono" style="font-weight:700;color:${col}">${fmtH(hrs)}</td><td><span class="chip">${e.origen}</span></td><td><span class="chip">${e.destino}</span></td>${remitoCell(e)}<td>${tipoBadgeFn(e.tipo)}</td><td>${modBadgeFn(e.modalidad,e.cantidad)}</td><td>${e.transporte||'—'}</td>${notaD}${isAdmin?`<td style="display:flex;gap:4px"><button class="btn bs bsm" onclick="openModal('${e.id}')">Recibir</button>${!e.isSeed?`<button class="btn bg bsm" onclick="delEnvio('${e.id}')" title="Eliminar">🗑</button>`:`<button class="btn bsm" style="background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0" onclick="delSeed('${e.id}')" title="Ocultar">🗑</button>`}</td>`:'<td></td>'}</tr>`;
-  }).join(''):emptyR(isAdmin?11:10);
+    return `<tr class="${rCls(status)}"><td>${sBadge(status)}</td><td>${isAdmin?`<input type="datetime-local" value="${e.fecha?e.fecha.slice(0,16):''}" onchange="editFechaDespacho('${e.id}',this.value)" style="font-size:.74rem;border:1px solid var(--border);border-radius:6px;padding:3px 6px;font-family:inherit">`:fmtDT(e.fecha)}</td><td class="mono" style="font-weight:700;color:${col}">${fmtH(hrs)}</td><td><span class="chip">${e.origen}</span></td><td><span class="chip">${e.destino}</span></td>${remitoCell(e)}<td>${tipoBadgeFn(e.tipo)}</td><td>${modBadgeFn(e.modalidad,e.cantidad)}</td><td>${e.transporte||'—'}</td>${notaD}<td>${fmtEstimado(e)}</td>${isAdmin?`<td style="display:flex;gap:4px"><button class="btn bs bsm" onclick="openModal('${e.id}')">Recibir</button><button class="btn bg bsm" onclick="showHistorialEnvio('${e.id}')" title="Historial">📋</button>${!e.isSeed?`<button class="btn bg bsm" onclick="delEnvio('${e.id}')" title="Eliminar">🗑</button>`:`<button class="btn bsm" style="background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0" onclick="delSeed('${e.id}')" title="Ocultar">🗑</button>`}</td>`:'<td></td>'}</tr>`;
+  }).join(''):emptyR(isAdmin?12:11);
 
   // Sección historial
   let hist=recibidos;
@@ -1389,7 +1422,7 @@ function renderEnvios(){
     const modColor={'Cajón':'#dbeafe,#1e40af','Pallet':'#fef9c3,#854d0e','Bulto':'#dcfce7,#166534'};
     const modBadgeFn=(mod,cant)=>{const [bg,co]=(modColor[mod]||'#f1f5f9,#475569').split(',');return mod?`<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:6px;font-size:.72rem;font-weight:700;background:${bg};color:${co}">${modIcon[mod]||'📫'} ${mod}${cant?' ×'+cant:''}</span>`:'<span style="color:var(--text3)">—</span>';};
     const tipoBadgeFn=(t)=>t?`<span class="chip" style="background:#ede9fe;color:#6d28d9">${t}</span>`:'<span style="color:var(--text3)">—</span>';
-    return `<tr><td>${fmtDT(e.fecha)}</td><td>${fmtDT(e.fechaLlegada)}</td><td><span class="chip">${e.origen}</span></td><td><span class="chip">${e.destino}</span></td>${remitoCell(e)}<td>${tipoBadgeFn(e.tipo)}</td><td>${modBadgeFn(e.modalidad,e.cantidad)}</td><td>${e.transporte||'—'}</td>${notaEnv}${notaRec}${isAdmin?`<td style="display:flex;gap:4px"><button class="btn bsm" style="background:var(--warn-lt);color:var(--warn);border:1px solid var(--warn-lt)" onclick="revertirRecepcion('${e.id}')" title="Volver a Pendiente">↩</button>${!e.isSeed?`<button class="btn bg bsm" onclick="delEnvio('${e.id}')">🗑</button>`:''}${e.isSeed?`<button class="btn bsm" style="background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0;font-size:.65rem" onclick="delSeed('${e.id}')">🗑</button>`:''}</td>`:'<td></td>'}</tr>`;
+    return `<tr><td>${fmtDT(e.fecha)}</td><td>${fmtDT(e.fechaLlegada)}</td><td><span class="chip">${e.origen}</span></td><td><span class="chip">${e.destino}</span></td>${remitoCell(e)}<td>${tipoBadgeFn(e.tipo)}</td><td>${modBadgeFn(e.modalidad,e.cantidad)}</td><td>${e.transporte||'—'}</td>${notaEnv}${notaRec}${isAdmin?`<td style="display:flex;gap:4px"><button class="btn bsm" style="background:var(--warn-lt);color:var(--warn);border:1px solid var(--warn-lt)" onclick="revertirRecepcion('${e.id}')" title="Volver a Pendiente">↩</button><button class="btn bg bsm" onclick="showHistorialEnvio('${e.id}')" title="Historial">📋</button>${!e.isSeed?`<button class="btn bg bsm" onclick="delEnvio('${e.id}')">🗑</button>`:''}${e.isSeed?`<button class="btn bsm" style="background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0;font-size:.65rem" onclick="delSeed('${e.id}')">🗑</button>`:''}</td>`:'<td></td>'}</tr>`;
   }).join(''):emptyH(isAdmin?11:10);
 }
 
@@ -1500,16 +1533,53 @@ function altaEnvio(){
   const mod=document.getElementById('f-mod').value;
   const cant=document.getElementById('f-cant').value;
   const tra=document.getElementById('f-tra').value;
+  const isAdmin=currentUser.role==='admin';
 
+  // ── Validaciones básicas ────────────────────────────────────────
   if(!origen||!destino||!fecha){ toast('⚠ Completá origen, destino y fecha'); return; }
   if(!remito){ toast('⚠ Ingresá el número de remito'); return; }
   if(!tipo){ toast('⚠ Seleccioná el tipo'); return; }
   if(!mod){ toast('⚠ Seleccioná la modalidad'); return; }
-  if(!cant||Number(cant)<1){ toast('⚠ Ingresá la cantidad'); return; }
+  const cantNum = Number(cant);
+  if(!cant||isNaN(cantNum)||cantNum<1||!Number.isInteger(cantNum)){
+    toast('⚠ La cantidad debe ser un número entero mayor a 0'); return;
+  }
+  if(cantNum>999){ toast('⚠ Cantidad fuera de rango (máx. 999)'); return; }
   if(!tra){ toast('⚠ Seleccioná el transporte'); return; }
   if(origen===destino){ toast('⚠ Origen y destino no pueden ser iguales'); return; }
+
+  // ── Validación de fecha ──────────────────────────────────────────
+  const fechaDT = new Date(fecha);
+  const nowDTar = nowAR();
+  if(isNaN(fechaDT.getTime())){ toast('⚠ Fecha inválida'); return; }
+  // Sucursal: no puede poner fecha futura (más de 30 min adelante)
+  if(!isAdmin){
+    const diffMin = (fechaDT - nowDTar) / 60000;
+    if(diffMin > 30){
+      toast('⚠ Las sucursales no pueden registrar fechas futuras'); return;
+    }
+  }
+  // Admin: no puede poner fecha futura (más de 24hs adelante — probablemente error)
+  if(isAdmin){
+    const diffH = (fechaDT - nowDTar) / 3600000;
+    if(diffH > 24){
+      toast('⚠ La fecha está más de 24hs en el futuro — ¿es correcto?');
+      dlConfirm('Fecha muy adelante en el tiempo',
+        'La fecha de salida está ' + Math.round(diffH) + 'hs en el futuro. ¿Confirmás que es correcto?',
+        ()=>_checkRemitoYRegistrar(origen,destino,fecha,remito,tipo,mod,cant,tra)
+      );
+      return;
+    }
+  }
+
+  // ── Validación de remito ─────────────────────────────────────────
+  if(remito.length < 3){ toast('⚠ El remito parece demasiado corto'); return; }
   if(envios.find(e=>String(e.remito)===remito)){ toast('⚠ Ese remito ya existe'); return; }
 
+  _checkRemitoYRegistrar(origen,destino,fecha,remito,tipo,mod,cant,tra);
+}
+
+function _checkRemitoYRegistrar(origen,destino,fecha,remito,tipo,mod,cant,tra){
   const tail=remito.slice(-5);
   const similar=envios.find(e=>String(e.remito)!==remito&&String(e.remito).slice(-5)===tail);
   if(similar){
@@ -1520,7 +1590,6 @@ function altaEnvio(){
     );
     return;
   }
-
   _registrarEnvio(origen,destino,fecha,remito,tipo,mod,cant,tra);
 }
 
@@ -1533,6 +1602,7 @@ function _registrarEnvio(origen,destino,fecha,remito,tipo,modalidad,cantidad,tra
   extras.push(nuevoEnvio);
   rebuildEnvios();
   saveState(); limpiar(); updBadge();
+  logCambio(nuevoEnvio.id, 'ALTA', `${origen}→${destino} · ${remito}`);
   toast(`✓ Envío ${remito} registrado`);
   show('envios');
   gasSend('altaEnvio',{envio:nuevoEnvio});
@@ -1592,6 +1662,7 @@ function confirmar(){
   saveState(); rebuildEnvios(); updBadge();
   closeModal();
   toast('✅ Recepción confirmada');
+  logCambio(_id, 'RECEPCIÓN', `Llegada: ${llegada}${obs?' · '+obs:''}`);
   gasSend('confirmarRecepcion',{id:_id,remito:_remito,fechaLlegada:llegada,obsRecv:obs||'',envio:_envio||{}});
   renderRecepcion(); renderEnvios();
 }
@@ -1627,7 +1698,7 @@ function revertirRecepcion(id){
   else { const idx=extras.findIndex(x=>x.id===id); if(idx>=0) Object.assign(extras[idx],upd); }
   saveState(); rebuildEnvios(); updBadge();
   toast('↩ Recepción revertida');
-  // ✅ Sincronizar con GAS (bug corregido: antes no llamaba gasSend)
+  logCambio(id, 'REVERSIÓN', 'Vuelto a pendiente por ' + currentUser.id);
   gasSend('revertirRecepcion', { id });
   renderEnvios();
 }
@@ -1793,13 +1864,17 @@ function renderReporte(){
     }
   });
 
-  // Por transporte
+  // Por transporte — con métricas de performance
   const porTra = {};
   base.forEach(e=>{
     const t=e.transporte||'Sin asignar';
-    if(!porTra[t]) porTra[t]={total:0,recibidos:0};
+    if(!porTra[t]) porTra[t]={total:0,recibidos:0,alertas:0,hrs:[]};
     porTra[t].total++;
-    if(e.estado==='recibido') porTra[t].recibidos++;
+    if(e.estado==='recibido'){
+      porTra[t].recibidos++;
+      if(e.fechaLlegada) porTra[t].hrs.push(weekdayHours(effectiveStart(e.fecha),new Date(e.fechaLlegada)));
+    }
+    if(e.estado==='pendiente'&&calcStatusCached(e).status==='alert') porTra[t].alertas++;
   });
 
   // Por tipo
@@ -1815,9 +1890,26 @@ function renderReporte(){
     return `<tr><td style="font-weight:600">${r.label}</td><td style="text-align:center">${r.total}</td><td style="text-align:center">${r.recibidos}</td><td style="text-align:center">${avg}</td></tr>`;
   }).join('');
 
-  const traRows = Object.entries(porTra).sort((a,b)=>b[1].total-a[1].total).map(([t,v])=>
-    `<tr><td style="font-weight:600">${t}</td><td style="text-align:center">${v.total}</td><td style="text-align:center">${v.recibidos}</td></tr>`
-  ).join('');
+  // Métricas por transporte con promedio y tasa de puntualidad
+  const traData = Object.entries(porTra).sort((a,b)=>b[1].total-a[1].total);
+  const traRows = traData.map(([t,v])=>{
+    const avgH = v.hrs.length ? v.hrs.reduce((a,b)=>a+b,0)/v.hrs.length : null;
+    const pct = v.recibidos>0 ? Math.round(v.recibidos/v.total*100) : 0;
+    const pctColor = pct>=90?'var(--ok)':pct>=70?'var(--warn)':'var(--alert)';
+    const alertaBadge = v.alertas>0?`<span style="background:var(--alert-lt);color:var(--alert);padding:1px 6px;border-radius:99px;font-size:.68rem;font-weight:700">🚨 ${v.alertas}</span>`:'';
+    return `<tr>
+      <td style="font-weight:600">${t} ${alertaBadge}</td>
+      <td style="text-align:center">${v.total}</td>
+      <td style="text-align:center">${v.recibidos}</td>
+      <td style="text-align:center;font-weight:700;color:${pctColor}">${pct}%</td>
+      <td style="text-align:center">${avgH!=null?fmtH(avgH):'—'}</td>
+      <td style="padding:8px 12px">
+        <div style="background:var(--border);border-radius:99px;height:6px;overflow:hidden;min-width:60px">
+          <div style="height:100%;border-radius:99px;background:${pctColor};width:${pct}%"></div>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
 
   const tipoRows = Object.entries(porTipo).sort((a,b)=>b[1]-a[1]).map(([t,v])=>
     `<tr><td style="font-weight:600">${t}</td><td style="text-align:center">${v}</td></tr>`
@@ -1830,8 +1922,8 @@ function renderReporte(){
     </div>
     <div style="display:flex;flex-direction:column;gap:14px">
       <div class="rpt-card">
-        <div class="rpt-card-head">🚛 Por transporte</div>
-        <table class="rpt-table"><thead><tr><th>Transporte</th><th>Total</th><th>Recibidos</th></tr></thead><tbody>${traRows||'<tr><td colspan="3" style="text-align:center;color:var(--text3);padding:14px">Sin datos</td></tr>'}</tbody></table>
+        <div class="rpt-card-head">🚛 Por transporte — performance</div>
+        <table class="rpt-table"><thead><tr><th>Transporte</th><th>Total</th><th>Recibidos</th><th>% completado</th><th>Prom. tránsito</th><th style="min-width:80px"></th></tr></thead><tbody>${traRows||'<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:14px">Sin datos</td></tr>'}</tbody></table>
       </div>
       <div class="rpt-card">
         <div class="rpt-card-head">📋 Por tipo</div>
@@ -2008,6 +2100,215 @@ async function saveMinVersion(){
     msg.style.display = 'inline';
     setTimeout(() => renderSistema(), 800); // refrescar para mostrar nuevo valor
   }
+}
+
+// ═══════════════════════════════════════════
+// BÚSQUEDA GLOBAL
+// ═══════════════════════════════════════════
+function renderBusqueda(){
+  const q = (document.getElementById('gbl-search')?.value||'').toLowerCase().trim();
+  const el = document.getElementById('gbl-results');
+  if(!q){ el.innerHTML=`<div class="card"><div class="empty"><div class="empty-icon">🔍</div><div class="empty-text">Escribí para buscar en todos los envíos</div></div></div>`; return; }
+
+  const u=currentUser, isSuc=u.role==='sucursal', depot=u.depot;
+  let base=[...envios];
+  if(isSuc) base=base.filter(e=>e.origen===depot||e.destino===depot);
+
+  const results=base.filter(e=>
+    (e.remito||'').toLowerCase().includes(q)||
+    (e.origen||'').toLowerCase().includes(q)||
+    (e.destino||'').toLowerCase().includes(q)||
+    (e.transporte||'').toLowerCase().includes(q)||
+    (e.tipo||'').toLowerCase().includes(q)||
+    (e.modalidad||'').toLowerCase().includes(q)||
+    (e.obs||'').toLowerCase().includes(q)||
+    (e.obsRecv||'').toLowerCase().includes(q)
+  ).sort((a,b)=>{
+    // Pendientes primero, después por fecha desc
+    if(a.estado!==b.estado) return a.estado==='pendiente'?-1:1;
+    return (b.fecha||'').localeCompare(a.fecha||'');
+  });
+
+  if(!results.length){
+    el.innerHTML=`<div class="card"><div class="empty"><div class="empty-icon">😶</div><div class="empty-text">Sin resultados para "${q}"</div></div></div>`; return;
+  }
+
+  const modIcon={'Cajón':'📦','Pallet':'🟫','Bulto':'🎁'};
+  const modColor={'Cajón':'#dbeafe,#1e40af','Pallet':'#fef9c3,#854d0e','Bulto':'#dcfce7,#166534'};
+  const modBadgeFn=(mod,cant)=>{const [bg,co]=(modColor[mod]||'#f1f5f9,#475569').split(',');return mod?`<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:6px;font-size:.72rem;font-weight:700;background:${bg};color:${co}">${modIcon[mod]||'📫'} ${mod}${cant?' ×'+cant:''}</span>`:'—';};
+
+  const hl=(s)=>{
+    if(!s) return '—';
+    const re=new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`, 'gi');
+    return String(s).replace(re,'<mark style="background:#fef08a;border-radius:2px;padding:0 2px">$1</mark>');
+  };
+
+  el.innerHTML=`
+    <div style="font-size:.75rem;color:var(--text3);margin-bottom:10px;font-weight:600">${results.length} resultado${results.length!==1?'s':''}</div>
+    <div class="card" style="padding:0;overflow:hidden"><div class="tw"><table>
+      <thead><tr><th>Estado</th><th>Salida</th><th>Origen</th><th>Destino</th><th>Remito</th><th>Tipo</th><th>Bulto</th><th>Transporte</th><th>Notas</th><th>Llegada</th></tr></thead>
+      <tbody>${results.map(e=>{
+        const st=e.estado==='recibido'?'<span class="badge-ok badge">✅ Recibido</span>':(() => {const {status,hrs}=calcStatusCached(e);return sBadge(status)+` <span style="font-size:.68rem;color:var(--text3)">${fmtH(hrs)}</span>`;})();
+        return `<tr>
+          <td>${st}</td>
+          <td style="font-size:.75rem">${fmtDT(e.fecha)}</td>
+          <td><span class="chip">${hl(e.origen)}</span></td>
+          <td><span class="chip">${hl(e.destino)}</span></td>
+          <td class="mono" style="color:var(--blue-md);font-weight:600">${hl(e.remito)}</td>
+          <td style="font-size:.75rem">${hl(e.tipo)||'—'}</td>
+          <td>${modBadgeFn(e.modalidad,e.cantidad)}</td>
+          <td style="font-size:.75rem">${hl(e.transporte)||'—'}</td>
+          <td class="nota-cell">${hl(e.obs)||'—'}</td>
+          <td style="font-size:.75rem">${e.fechaLlegada?fmtDT(e.fechaLlegada):'—'}</td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table></div></div>`;
+}
+
+// ═══════════════════════════════════════════
+// HISTORIAL DE CAMBIOS POR ENVÍO
+// ═══════════════════════════════════════════
+// Se guarda en localStorage bajo 'dl_historial_envio_ID'
+// El GAS lo loguea en la hoja 'log' — acá solo lo mostramos localmente
+
+function logCambio(envioId, accion, detalle){
+  const key = 'dl_hist_' + envioId;
+  let hist = [];
+  try { hist = JSON.parse(localStorage.getItem(key)||'[]'); } catch(e){}
+  hist.unshift({
+    ts: new Date().toISOString(),
+    usuario: currentUser.id,
+    accion,
+    detalle: detalle||''
+  });
+  // Guardar solo los últimos 20 cambios
+  localStorage.setItem(key, JSON.stringify(hist.slice(0,20)));
+}
+
+function getHistorialEnvio(envioId){
+  try { return JSON.parse(localStorage.getItem('dl_hist_'+envioId)||'[]'); } catch(e){ return []; }
+}
+
+function showHistorialEnvio(id){
+  const e = envios.find(x=>x.id===id);
+  if(!e) return;
+  const hist = getHistorialEnvio(id);
+  const rows = hist.length
+    ? hist.map(h=>`<tr><td style="font-size:.72rem;color:var(--text3);white-space:nowrap">${fmtDT(h.ts)}</td><td style="font-size:.75rem;font-weight:600">${h.accion}</td><td style="font-size:.72rem">${h.usuario}</td><td style="font-size:.72rem;color:var(--text2)">${h.detalle}</td></tr>`).join('')
+    : `<tr><td colspan="4" style="text-align:center;color:var(--text3);padding:12px;font-size:.78rem">Sin cambios registrados en este dispositivo</td></tr>`;
+
+  document.getElementById('mc-title').innerHTML = `📋 Historial — <span style="font-family:'JetBrains Mono',monospace;font-size:.85rem">${e.remito}</span>`;
+  document.getElementById('mc-msg').innerHTML = `
+    <table style="width:100%;border-collapse:collapse;margin-top:8px">
+      <thead><tr style="background:var(--surface2)"><th style="padding:6px 8px;text-align:left;font-size:.68rem;color:var(--text3);text-transform:uppercase">Fecha</th><th style="padding:6px 8px;text-align:left;font-size:.68rem;color:var(--text3);text-transform:uppercase">Acción</th><th style="padding:6px 8px;text-align:left;font-size:.68rem;color:var(--text3);text-transform:uppercase">Usuario</th><th style="padding:6px 8px;text-align:left;font-size:.68rem;color:var(--text3);text-transform:uppercase">Detalle</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+  document.getElementById('mc-ok').style.display='none';
+  document.getElementById('mo-confirm').classList.add('open');
+}
+
+// ═══════════════════════════════════════════
+// ESTIMACIÓN DE LLEGADA
+// ═══════════════════════════════════════════
+function estimarLlegada(envio){
+  // Usa el promedio de los últimos 30 días de esa ruta
+  const now = nowAR();
+  const d30 = new Date(now - 30*24*3600*1000);
+  const match = r => (r.origen===envio.origen&&r.destino===envio.destino)||(r.origen===envio.destino&&r.destino===envio.origen);
+  const recibidos = envios.filter(e=>e.estado==='recibido'&&e.fechaLlegada&&match(e)&&new Date(e.fechaLlegada)>=d30);
+  if(!recibidos.length) return null;
+  const avgHrs = recibidos.reduce((acc,e)=>acc+weekdayHours(effectiveStart(e.fecha),new Date(e.fechaLlegada)),0)/recibidos.length;
+  // Fecha estimada = fecha de salida + avgHrs en días corridos (aproximación)
+  const start = effectiveStart(envio.fecha);
+  const estimado = new Date(start.getTime() + avgHrs*3600000);
+  return { estimado, avgHrs, n: recibidos.length };
+}
+
+function fmtEstimado(envio){
+  const est = estimarLlegada(envio);
+  if(!est) return '<span style="color:var(--text3);font-size:.72rem">Sin datos</span>';
+  const now = nowAR();
+  const diff = est.estimado - now;
+  const diffH = diff/3600000;
+  if(diffH < 0) return `<span style="color:var(--alert);font-size:.72rem">Retrasado ~${fmtH(Math.abs(diffH))}</span>`;
+  if(diffH < 4) return `<span style="color:var(--warn);font-size:.72rem">Hoy ~${fmtH(diffH)}</span>`;
+  return `<span style="font-size:.72rem;color:var(--text2)">${fmtDT(est.estimado.toISOString())} <span style="color:var(--text3)">(${est.n}e)</span></span>`;
+}
+
+// ═══════════════════════════════════════════
+// MODO TV
+// ═══════════════════════════════════════════
+let _tvTimer = null;
+let _tvClockTimer = null;
+
+function openTVMode(){
+  document.getElementById('tv-overlay').style.display='block';
+  renderTV();
+  _tvTimer = setInterval(renderTV, 30000);
+  _tvClockTimer = setInterval(()=>{
+    const el=document.getElementById('tv-clock');
+    if(el) el.textContent = new Date().toLocaleTimeString('es-AR',{timeZone:TZ,hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  }, 1000);
+}
+
+function closeTVMode(){
+  document.getElementById('tv-overlay').style.display='none';
+  clearInterval(_tvTimer); clearInterval(_tvClockTimer);
+  _tvTimer=null; _tvClockTimer=null;
+}
+
+function renderTV(){
+  const pending = envios.filter(e=>e.estado==='pendiente');
+  const modIcon={'Cajón':'📦','Pallet':'🟫','Bulto':'🎁'};
+  const cols=['var(--alert)','var(--warn)','#22c55e'];
+
+  const depotCards = DEPOTS.map(dep=>{
+    const items = pending.filter(e=>e.destino===dep)
+      .sort((a,b)=>{
+        const sa=calcStatusCached(a),sb=calcStatusCached(b);
+        const o={alert:0,warn:1,ok:2};
+        return o[sa.status]-o[sb.status]||sb.hrs-sa.hrs;
+      });
+    const ac=items.filter(e=>calcStatusCached(e).status==='alert').length;
+    const wc=items.filter(e=>calcStatusCached(e).status==='warn').length;
+    const headerColor=ac?'#dc2626':wc?'#d97706':'#16a34a';
+    const rows=items.map(e=>{
+      const {hrs,status}=calcStatusCached(e);
+      const col=status==='alert'?'#ef4444':status==='warn'?'#f59e0b':'#4ade80';
+      const est=estimarLlegada(e);
+      const estTxt=est?fmtDT(est.estimado.toISOString()):'—';
+      return `<tr style="border-bottom:1px solid rgba(255,255,255,.07)">
+        <td style="padding:10px 12px;color:${col};font-weight:700;font-size:.95rem;font-family:'JetBrains Mono',monospace">${fmtH(hrs)}</td>
+        <td style="padding:10px 12px;color:rgba(255,255,255,.8);font-size:.85rem"><span style="background:rgba(255,255,255,.1);padding:2px 8px;border-radius:6px">${e.origen}</span></td>
+        <td style="padding:10px 12px;color:rgba(255,255,255,.9);font-family:'JetBrains Mono',monospace;font-size:.85rem">${e.remito}</td>
+        <td style="padding:10px 12px;font-size:.85rem">${modIcon[e.modalidad]||'📫'} ${e.modalidad||'—'} ${e.cantidad?'×'+e.cantidad:''}</td>
+        <td style="padding:10px 12px;color:rgba(255,255,255,.6);font-size:.78rem">${e.transporte||'—'}</td>
+        <td style="padding:10px 12px;color:rgba(255,255,255,.5);font-size:.75rem">${estTxt}</td>
+      </tr>`;
+    }).join('');
+
+    return `<div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:12px;overflow:hidden;margin-bottom:16px">
+      <div style="padding:14px 16px;background:rgba(255,255,255,.06);display:flex;align-items:center;gap:10px;border-bottom:1px solid rgba(255,255,255,.08)">
+        <span style="font-size:1.1rem;font-weight:800;color:#fff">🏭 ${dep}</span>
+        ${ac?`<span style="background:#dc2626;color:#fff;padding:2px 10px;border-radius:99px;font-size:.75rem;font-weight:700">🚨 ${ac} alerta${ac>1?'s':''}</span>`:''}
+        ${wc?`<span style="background:#d97706;color:#fff;padding:2px 10px;border-radius:99px;font-size:.75rem;font-weight:700">⚠️ ${wc} demorado${wc>1?'s':''}</span>`:''}
+        <span style="margin-left:auto;color:rgba(255,255,255,.4);font-size:.78rem">${items.length} pendiente${items.length!==1?'s':''}</span>
+      </div>
+      ${items.length?`<table style="width:100%;border-collapse:collapse">
+        <thead><tr style="background:rgba(255,255,255,.03)">
+          <th style="padding:8px 12px;text-align:left;font-size:.65rem;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.5px">Horas</th>
+          <th style="padding:8px 12px;text-align:left;font-size:.65rem;color:rgba(255,255,255,.35);text-transform:uppercase">Origen</th>
+          <th style="padding:8px 12px;text-align:left;font-size:.65rem;color:rgba(255,255,255,.35);text-transform:uppercase">Remito</th>
+          <th style="padding:8px 12px;text-align:left;font-size:.65rem;color:rgba(255,255,255,.35);text-transform:uppercase">Bulto</th>
+          <th style="padding:8px 12px;text-align:left;font-size:.65rem;color:rgba(255,255,255,.35);text-transform:uppercase">Transporte</th>
+          <th style="padding:8px 12px;text-align:left;font-size:.65rem;color:rgba(255,255,255,.35);text-transform:uppercase">Est. llegada</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>`:`<div style="padding:24px;text-align:center;color:rgba(255,255,255,.3);font-size:.85rem">✅ Sin pendientes</div>`}
+    </div>`;
+  }).join('');
+
+  document.getElementById('tv-content').innerHTML=depotCards;
 }
 
 // ═══════════════════════════════════════════
