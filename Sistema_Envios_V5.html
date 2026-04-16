@@ -515,7 +515,7 @@ tr.row-warn{background:rgba(217,119,6,.04)}
 
 <!-- MODAL CONFIRM -->
 <div class="mo" id="mo-confirm" style="z-index:500">
-  <div class="modal" style="width:360px">
+  <div class="modal" style="width:580px">
     <div class="confirm-title" id="mc-title"></div>
     <div class="confirm-msg" id="mc-msg"></div>
     <div class="mf">
@@ -545,7 +545,7 @@ tr.row-warn{background:rgba(217,119,6,.04)}
 // ═══════════════════════════════════════════
 // CONSTANTES
 // ═══════════════════════════════════════════
-const APP_VERSION = '20260416.1545'; // ← generado automáticamente por Claude al crear el archivo (YYYYMMDD.HHMM)
+const APP_VERSION = '20260416.1805'; // ← generado automáticamente por Claude al crear el archivo (YYYYMMDD.HHMM)
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbwNrWxDXyTFhtRMDkkTZl5_lN1fglUajnTuIlfpZEMknW9FPwXyzMnwcGAANaI53s0j/exec';
 const DEPOTS  = ['Pico','MDP','Bs As','Rosario'];
 const ROUTE_DEFS = [
@@ -2205,16 +2205,29 @@ function showHistorialEnvio(id){
   if(!e) return;
   const hist = getHistorialEnvio(id);
   const rows = hist.length
-    ? hist.map(h=>`<tr><td style="font-size:.72rem;color:var(--text3);white-space:nowrap">${fmtDT(h.ts)}</td><td style="font-size:.75rem;font-weight:600">${h.accion}</td><td style="font-size:.72rem">${h.usuario}</td><td style="font-size:.72rem;color:var(--text2)">${h.detalle}</td></tr>`).join('')
-    : `<tr><td colspan="4" style="text-align:center;color:var(--text3);padding:12px;font-size:.78rem">Sin cambios registrados en este dispositivo</td></tr>`;
+    ? hist.map(h=>`<tr>
+        <td style="white-space:nowrap;font-size:.75rem;color:var(--text3);padding:8px 10px">${fmtDT(h.ts)}</td>
+        <td style="white-space:nowrap;font-size:.75rem;font-weight:700;padding:8px 10px">${h.accion}</td>
+        <td style="white-space:nowrap;font-size:.75rem;padding:8px 10px">${h.usuario}</td>
+        <td style="font-size:.75rem;color:var(--text2);padding:8px 10px;word-break:break-word">${h.detalle}</td>
+      </tr>`).join('')
+    : `<tr><td colspan="4" style="text-align:center;color:var(--text3);padding:16px;font-size:.8rem">Sin cambios registrados en este dispositivo</td></tr>`;
 
   document.getElementById('mc-title').innerHTML = `📋 Historial — <span style="font-family:'JetBrains Mono',monospace;font-size:.85rem">${e.remito}</span>`;
   document.getElementById('mc-msg').innerHTML = `
-    <table style="width:100%;border-collapse:collapse;margin-top:8px">
-      <thead><tr style="background:var(--surface2)"><th style="padding:6px 8px;text-align:left;font-size:.68rem;color:var(--text3);text-transform:uppercase">Fecha</th><th style="padding:6px 8px;text-align:left;font-size:.68rem;color:var(--text3);text-transform:uppercase">Acción</th><th style="padding:6px 8px;text-align:left;font-size:.68rem;color:var(--text3);text-transform:uppercase">Usuario</th><th style="padding:6px 8px;text-align:left;font-size:.68rem;color:var(--text3);text-transform:uppercase">Detalle</th></tr></thead>
-      <tbody>${rows}</tbody>
-    </table>`;
-  document.getElementById('mc-ok').style.display='none';
+    <div style="overflow-x:auto;margin-top:8px">
+      <table style="width:100%;border-collapse:collapse;min-width:400px">
+        <thead><tr style="background:var(--surface2)">
+          <th style="padding:7px 10px;text-align:left;font-size:.68rem;color:var(--text3);text-transform:uppercase;white-space:nowrap">Fecha</th>
+          <th style="padding:7px 10px;text-align:left;font-size:.68rem;color:var(--text3);text-transform:uppercase;white-space:nowrap">Acción</th>
+          <th style="padding:7px 10px;text-align:left;font-size:.68rem;color:var(--text3);text-transform:uppercase;white-space:nowrap">Usuario</th>
+          <th style="padding:7px 10px;text-align:left;font-size:.68rem;color:var(--text3);text-transform:uppercase">Detalle</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+  const okBtn=document.getElementById('mc-ok');
+  okBtn.style.display='none';
   document.getElementById('mo-confirm').classList.add('open');
 }
 
