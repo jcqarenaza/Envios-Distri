@@ -370,7 +370,7 @@ tr.row-warn{background:rgba(217,119,6,.04)}
           <button onclick="document.getElementById('flt-desde').value='';document.getElementById('flt-hacia').value='';renderEnvios()" style="font-size:.73rem;padding:6px 11px;border-radius:8px;border:1px solid var(--border);background:var(--surface);cursor:pointer;color:var(--text3)">✕</button>
         </div>
       </div>
-      <!-- Por recibir PRIMERO -->
+      <!-- Por recibir (sucursal) / Todos los pendientes (admin+readonly) -->
       <div class="env-section" id="sec-por-recibir">
         <div class="env-sec-hd">
           <span class="env-sec-icon">📥</span>
@@ -382,11 +382,11 @@ tr.row-warn{background:rgba(217,119,6,.04)}
           <tbody id="tb-por-recibir"></tbody>
         </table></div></div>
       </div>
-      <!-- En tránsito -->
+      <!-- En tránsito — solo visible para sucursales -->
       <div class="env-section" id="sec-despachos">
         <div class="env-sec-hd">
           <span class="env-sec-icon">🚚</span>
-          <span class="env-sec-title" id="sec-desp-title">En tránsito</span>
+          <span class="env-sec-title" id="sec-desp-title">Despachados</span>
           <span class="env-sec-badge" id="sec-desp-badge"></span>
         </div>
         <div class="card" style="padding:0;overflow:hidden"><div class="tw"><table>
@@ -401,10 +401,6 @@ tr.row-warn{background:rgba(217,119,6,.04)}
           <span class="env-sec-title" id="sec-hist-title">Historial</span>
           <span class="env-sec-badge" id="sec-hist-badge"></span>
           <span id="hist-toggle-icon" style="margin-left:auto;font-size:.85rem;color:var(--text3)">▼</span>
-        </div>
-        <div id="hist-search-bar" style="padding:10px 14px;border-bottom:1px solid var(--border);background:var(--surface2);display:flex;gap:8px;align-items:center">
-          <input id="hist-search" type="text" placeholder="Buscar por remito, origen, destino, transporte…" oninput="renderEnvios()" style="flex:1;font-size:.8rem;padding:6px 11px;border-radius:8px;border:1px solid var(--border);background:var(--surface);font-family:inherit;outline:none"/>
-          <button onclick="document.getElementById('hist-search').value='';renderEnvios()" style="font-size:.72rem;padding:5px 10px;border-radius:7px;border:1px solid var(--border);background:var(--surface);cursor:pointer;color:var(--text3)">✕</button>
         </div>
         <div id="hist-body">
           <div class="tw"><table>
@@ -451,16 +447,6 @@ tr.row-warn{background:rgba(217,119,6,.04)}
     <div id="view-sistema" class="view">
       <div class="ph"><div class="ph-left"><div class="pt">⚙️ Sistema</div><div class="ps">Control de versiones y configuración</div></div></div>
       <div id="sistema-content"></div>
-    </div>
-
-      <div class="card" style="margin-bottom:16px">
-        <div style="display:flex;gap:8px;align-items:center">
-          <input type="text" id="gbl-search" placeholder="Remito, depósito, transporte, tipo..."
-            style="flex:1;padding:10px 14px;border:1.5px solid var(--border);border-radius:10px;font-size:.9rem;font-family:inherit;outline:none;transition:border .15s"/>
-          <button class="btn bg" onclick="limpiarBusqueda()">✕</button>
-        </div>
-      </div>
-      <div id="gbl-results"></div>
     </div>
 
     <!-- REPORTE -->
@@ -559,7 +545,7 @@ tr.row-warn{background:rgba(217,119,6,.04)}
 // ═══════════════════════════════════════════
 // CONSTANTES
 // ═══════════════════════════════════════════
-const APP_VERSION = '20260416.0902'; // ← generado automáticamente por Claude al crear el archivo (YYYYMMDD.HHMM)
+const APP_VERSION = '20260416.1545'; // ← generado automáticamente por Claude al crear el archivo (YYYYMMDD.HHMM)
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbwNrWxDXyTFhtRMDkkTZl5_lN1fglUajnTuIlfpZEMknW9FPwXyzMnwcGAANaI53s0j/exec';
 const DEPOTS  = ['Pico','MDP','Bs As','Rosario'];
 const ROUTE_DEFS = [
@@ -1356,7 +1342,7 @@ function renderEnvios(){
   filtersEl.style.display=(isAdmin||u.role==='readonly')?'flex':'none';
   const desde=(isAdmin||u.role==='readonly')?document.getElementById('flt-desde').value:'';
   const hacia=(isAdmin||u.role==='readonly')?document.getElementById('flt-hacia').value:'';
-  const buscar=(document.getElementById('hist-search').value||'').toLowerCase().trim();
+  const buscar='';
   const STATUS_ORDER={alert:0,warn:1,ok:2};
   let base=[...envios];
   if(isSuc) base=base.filter(e=>e.origen===depot||e.destino===depot);
@@ -1369,10 +1355,17 @@ function renderEnvios(){
   });
   const recibidos=base.filter(e=>e.estado==='recibido').sort((a,b)=>(b.fechaLlegada||'').localeCompare(a.fechaLlegada||''));
 
-  // Sección por recibir (siempre visible para todos)
+  // Sección por recibir:
+  // - Sucursal: solo los que van hacia su depósito
+  // - Admin/readonly: TODOS los pendientes (unificado, sin sección en tránsito separada)
   let recvPendAll;
-  if(isSuc){ recvPendAll=pendientes.filter(e=>e.destino===depot); document.getElementById('sec-recv-title').textContent=`📥 Por recibir en ${depot}`; }
-  else { recvPendAll=pendientes.filter(e=>hacia?e.destino===hacia:true); document.getElementById('sec-recv-title').textContent=`📥 Por recibir${hacia?' en '+hacia:''}`; }
+  if(isSuc){
+    recvPendAll=pendientes.filter(e=>e.destino===depot);
+    document.getElementById('sec-recv-title').textContent=`📥 Por recibir en ${depot}`;
+  } else {
+    recvPendAll=pendientes; // todos los pendientes en una sola vista
+    document.getElementById('sec-recv-title').textContent=`📦 Todos los pendientes${desde||hacia?' · filtrado':''}`;
+  }
   const recvCount=recvPendAll.length, recvA=recvPendAll.filter(e=>calcStatusCached(e).status==='alert').length, recvW=recvPendAll.filter(e=>calcStatusCached(e).status==='warn').length;
   const recvBadge=document.getElementById('sec-recv-badge');
   recvBadge.textContent=recvCount?`${recvCount} envío${recvCount>1?'s':''}`:' Sin pendientes';
@@ -1390,15 +1383,18 @@ function renderEnvios(){
     return `<tr class="${rCls(status)}"><td>${sBadge(status)}</td><td>${fmtDT(e.fecha)}</td><td class="mono" style="font-weight:700;color:${col}">${fmtH(hrs)}</td><td><span class="chip">${e.origen}</span></td><td><span class="chip">${e.destino}</span></td>${remitoCell(e)}<td>${tipoBadgeFn(e.tipo)}</td><td>${modBadgeFn(e.modalidad,e.cantidad)}</td><td>${e.transporte||'—'}</td>${notaE}<td>${fmtEstimado(e)}</td>${isAdmin?`<td style="display:flex;gap:4px"><button class="btn bs bsm" onclick="openModal('${e.id}')">Recibir</button><button class="btn bg bsm" onclick="showHistorialEnvio('${e.id}')" title="Historial">📋</button>${!e.isSeed?`<button class="btn bg bsm" onclick="delEnvio('${e.id}')" title="Eliminar">🗑</button>`:`<button class="btn bsm" style="background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0" onclick="delSeed('${e.id}')" title="Ocultar">🗑</button>`}</td>`:'<td></td>'}</tr>`;
   }).join(''):emptyR2(12);
 
-  // Sección en tránsito
-  const despPend=isSuc?pendientes.filter(e=>e.origen===depot):pendientes;
+  // Sección despachados: solo visible para sucursales (lo que salió desde su depósito)
+  // Admin y readonly ven todo en la sección de arriba unificada
+  const secDesp=document.getElementById('sec-despachos');
+  if(!isSuc){ secDesp.style.display='none'; } else { secDesp.style.display=''; }
+  const despPend=isSuc?pendientes.filter(e=>e.origen===depot):[];
   const despCount=despPend.length, despA=despPend.filter(e=>calcStatusCached(e).status==='alert').length, despW=despPend.filter(e=>calcStatusCached(e).status==='warn').length;
-  document.getElementById('sec-desp-title').textContent=isSuc?`🚚 En tránsito — Despachados desde ${depot}`:'🚚 En tránsito';
+  document.getElementById('sec-desp-title').textContent=`🚚 Despachados desde ${depot}`;
   const despBadge=document.getElementById('sec-desp-badge');
   despBadge.textContent=despCount?`${despCount} envío${despCount>1?'s':''}`:' Sin pendientes';
   despBadge.className='env-sec-badge '+(despA?'alert':despW?'warn':despCount?'ok':'');
-  document.getElementById('th-acciones').style.display=isAdmin?'':'none';
-  const emptyR=n=>`<tr><td colspan="${n}"><div class="empty" style="padding:14px 0"><div class="empty-icon">📭</div><div class="empty-text">Sin envíos en tránsito</div></div></td></tr>`;
+  document.getElementById('th-acciones').style.display='none';
+  const emptyR=n=>`<tr><td colspan="${n}"><div class="empty" style="padding:14px 0"><div class="empty-icon">📭</div><div class="empty-text">Sin envíos despachados</div></div></td></tr>`;
   document.getElementById('tb-despachos').innerHTML=despPend.length?despPend.map(e=>{
     const {hrs,status}=calcStatusCached(e);const col=status==='alert'?'var(--alert)':status==='warn'?'var(--warn)':'var(--ok)';
     const notaD=e.obs?`<td class="nota-cell" title="${e.obs}">${e.obs}</td>`:'<td>—</td>';
@@ -1437,6 +1433,48 @@ function toggleHistorial(){
   document.getElementById('hist-toggle-icon').textContent=open?'▶':'▼';
 }
 
+// Filtra solo el historial sin reconstruir toda la vista
+function filtrarHistorial(){
+  const buscar=(document.getElementById('hist-search')?.value||'').toLowerCase().trim();
+  const isAdmin=currentUser?.role==='admin';
+  const recibidos=[...envios].filter(e=>e.estado==='recibido').sort((a,b)=>(b.fechaLlegada||'').localeCompare(a.fechaLlegada||''));
+  let hist=recibidos;
+  if(buscar) hist=hist.filter(e=>
+    (e.remito||'').toLowerCase().includes(buscar)||
+    (e.origen||'').toLowerCase().includes(buscar)||
+    (e.destino||'').toLowerCase().includes(buscar)||
+    (e.transporte||'').toLowerCase().includes(buscar)||
+    (e.tipo||'').toLowerCase().includes(buscar)||
+    (e.modalidad||'').toLowerCase().includes(buscar)||
+    (e.obs||'').toLowerCase().includes(buscar)||
+    (e.obsRecv||'').toLowerCase().includes(buscar)
+  );
+  // Actualizar badge
+  const histBadge=document.getElementById('sec-hist-badge');
+  if(histBadge){
+    histBadge.textContent=buscar?`${hist.length} resultado${hist.length!==1?'s':''}`:' ';
+    histBadge.className='env-sec-badge'+(buscar&&hist.length?' ok':buscar&&!hist.length?' alert':'');
+  }
+  // Actualizar título
+  const histTitle=document.getElementById('sec-hist-title');
+  if(histTitle) histTitle.textContent=`Historial — ${recibidos.length} recibido${recibidos.length!==1?'s':''}`;
+
+  const modIcon={'Cajón':'📦','Pallet':'🟫','Bulto':'🎁'};
+  const modColor={'Cajón':'#dbeafe,#1e40af','Pallet':'#fef9c3,#854d0e','Bulto':'#dcfce7,#166534'};
+  const modBadgeFn=(mod,cant)=>{const [bg,co]=(modColor[mod]||'#f1f5f9,#475569').split(',');return mod?`<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:6px;font-size:.72rem;font-weight:700;background:${bg};color:${co}">${modIcon[mod]||'📫'} ${mod}${cant?' ×'+cant:''}</span>`:'<span style="color:var(--text3)">—</span>';};
+  const tipoBadgeFn=(t)=>t?`<span class="chip" style="background:#ede9fe;color:#6d28d9">${t}</span>`:'<span style="color:var(--text3)">—</span>';
+  const remitoCell=(e)=>isAdmin?`<td class="mono" style="color:var(--blue-md);font-weight:600;padding:4px 10px"><input class="remito-edit" value="${e.remito}" data-orig="${e.remito}" onblur="editRemito('${e.id}',this)" onkeydown="if(event.key==='Enter')this.blur();if(event.key==='Escape'){this.value=this.dataset.orig;this.blur()}" title="Enter/Esc"/></td>`:`<td class="mono" style="color:var(--blue-md);font-weight:600">${e.remito}</td>`;
+  const emptyH=n=>`<tr><td colspan="${n}"><div class="empty" style="padding:14px 0"><div class="empty-icon">${buscar?'🔍':'✅'}</div><div class="empty-text">${buscar?'Sin resultados':'Sin recibidos aún'}</div></div></td></tr>`;
+
+  const tb=document.getElementById('tb-historial');
+  if(!tb) return;
+  tb.innerHTML=hist.length?hist.map(e=>{
+    const notaEnv=e.obs?`<td class="nota-cell" title="${e.obs}">${e.obs}</td>`:'<td style="color:var(--text3);font-size:.72rem">—</td>';
+    const notaRec=e.obsRecv?`<td class="nota-cell recv" title="${e.obsRecv}">${e.obsRecv}</td>`:'<td style="color:var(--text3);font-size:.72rem">—</td>';
+    return `<tr><td>${fmtDT(e.fecha)}</td><td>${fmtDT(e.fechaLlegada)}</td><td><span class="chip">${e.origen}</span></td><td><span class="chip">${e.destino}</span></td>${remitoCell(e)}<td>${tipoBadgeFn(e.tipo)}</td><td>${modBadgeFn(e.modalidad,e.cantidad)}</td><td>${e.transporte||'—'}</td>${notaEnv}${notaRec}${isAdmin?`<td style="display:flex;gap:4px"><button class="btn bsm" style="background:var(--warn-lt);color:var(--warn);border:1px solid var(--warn-lt)" onclick="revertirRecepcion('${e.id}')" title="Volver a Pendiente">↩</button><button class="btn bg bsm" onclick="showHistorialEnvio('${e.id}')" title="Historial">📋</button>${!e.isSeed?`<button class="btn bg bsm" onclick="delEnvio('${e.id}')">🗑</button>`:''}${e.isSeed?`<button class="btn bsm" style="background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0;font-size:.65rem" onclick="delSeed('${e.id}')">🗑</button>`:''}</td>`:'<td></td>'}</tr>`;
+  }).join(''):emptyH(isAdmin?11:10);
+}
+
 // ═══════════════════════════════════════════
 // RECEPCIÓN
 // ═══════════════════════════════════════════
@@ -1453,7 +1491,7 @@ function renderRecepcion(){
     const sa=calcStatusCached(a),sb=calcStatusCached(b);
     const ord={alert:0,warn:1,ok:2};
     if(ord[sa.status]!==ord[sb.status]) return ord[sa.status]-ord[sb.status];
-    return sa.hrs-sb.hrs;
+    return sb.hrs-sa.hrs; // más horas primero dentro del grupo
   });
   const alm=document.getElementById('rec-alarms');
   const ac=items.filter(e=>calcStatusCached(e).status==='alert').length, wc=items.filter(e=>calcStatusCached(e).status==='warn').length;
@@ -1583,17 +1621,48 @@ function altaEnvio(){
   _checkRemitoYRegistrar(origen,destino,fecha,remito,tipo,mod,cant,tra);
 }
 
+// Extrae el número de comprobante normalizado (sin ceros, sin prefijo)
+// Ej: "0001-00013833" → "13833" | "0010-000010388" → "10388"
+function _normRemito(r){
+  const s = String(r).trim();
+  const parts = s.split('-');
+  const num = parts.length > 1 ? parts[parts.length-1] : s;
+  return num.replace(/^0+/, '') || '0';
+}
+
 function _checkRemitoYRegistrar(origen,destino,fecha,remito,tipo,mod,cant,tra){
-  const tail=remito.slice(-5);
-  const similar=envios.find(e=>String(e.remito)!==remito&&String(e.remito).slice(-5)===tail);
-  if(similar){
-    dlConfirm(
-      'Remito similar existente',
-      'Los últimos 5 dígitos coinciden con el remito ' + similar.remito + ' (' + similar.origen + '→' + similar.destino + '). ¿Confirmás que es un remito distinto?',
-      ()=>_registrarEnvio(origen,destino,fecha,remito,tipo,mod,cant,tra)
-    );
+  const normNuevo = _normRemito(remito);
+  const prefNuevo = String(remito).split('-')[0] || '';
+
+  // Buscar coincidencias por número de comprobante normalizado
+  const mismoNumero = envios.filter(e => {
+    const r = String(e.remito);
+    return r !== remito && _normRemito(r) === normNuevo;
+  });
+
+  if(mismoNumero.length > 0){
+    const e0 = mismoNumero[0];
+    const prefExist = String(e0.remito).split('-')[0] || '';
+    const mismoPrefix = prefExist === prefNuevo;
+
+    if(mismoPrefix){
+      // Mismo punto de venta Y mismo número → casi seguro duplicado
+      dlConfirm(
+        '⚠️ Posible remito duplicado',
+        `El número de comprobante ${normNuevo} ya existe con el mismo punto de venta (${e0.remito} · ${e0.origen}→${e0.destino} · ${e0.estado}). ¿Confirmás que es un envío distinto?`,
+        ()=>_registrarEnvio(origen,destino,fecha,remito,tipo,mod,cant,tra)
+      );
+    } else {
+      // Distinto punto de venta, mismo número → aviso más leve
+      dlConfirm(
+        'Número de comprobante repetido',
+        `El número ${normNuevo} ya existe con otro punto de venta (${e0.remito} · ${e0.origen}→${e0.destino}). ¿Confirmás que son remitos distintos?`,
+        ()=>_registrarEnvio(origen,destino,fecha,remito,tipo,mod,cant,tra)
+      );
+    }
     return;
   }
+
   _registrarEnvio(origen,destino,fecha,remito,tipo,mod,cant,tra);
 }
 
