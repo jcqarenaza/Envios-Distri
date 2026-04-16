@@ -229,9 +229,11 @@ tr.row-warn{background:rgba(217,119,6,.04)}
 .rpt-period{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
 .rpt-period select,.rpt-period input{padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:.8rem;font-family:inherit;outline:none;background:var(--surface)}
 .rpt-period select:focus,.rpt-period input:focus{border-color:var(--blue-md)}
-#tv-overlay ::selection{ background:#f59e0b; color:#0f172a; }
-#tv-overlay { color: #fff; }
-#tv-overlay td, #tv-overlay th, #tv-overlay span, #tv-overlay div { color: inherit; }
+#tv-overlay { color:#fff; }
+#tv-overlay table { color:#fff; }
+#tv-overlay td, #tv-overlay th { color:#fff; }
+#tv-overlay ::selection { background:rgba(255,255,255,.08); color:#fff; }
+#tv-overlay ::-moz-selection { background:rgba(255,255,255,.08); color:#fff; }
 @media(max-width:768px){.sidebar{display:none}.main{padding:14px}.fg{grid-template-columns:1fr}}
 </style>
 </head>
@@ -451,16 +453,11 @@ tr.row-warn{background:rgba(217,119,6,.04)}
       <div id="sistema-content"></div>
     </div>
 
-    <!-- BÚSQUEDA GLOBAL -->
-    <div id="view-busqueda" class="view">
-      <div class="ph"><div class="ph-left"><div class="pt">🔍 Búsqueda</div><div class="ps">Encontrá cualquier envío por remito, origen, destino o transporte</div></div></div>
       <div class="card" style="margin-bottom:16px">
         <div style="display:flex;gap:8px;align-items:center">
-          <input type="text" id="gbl-search" placeholder="Remito, depósito, transporte, tipo..." autofocus
-            style="flex:1;padding:10px 14px;border:1.5px solid var(--border);border-radius:10px;font-size:.9rem;font-family:inherit;outline:none;transition:border .15s"
-            oninput="renderBusqueda()"
-            onkeydown="if(event.key==='Escape'){document.getElementById('gbl-search').value='';renderBusqueda();}"/>
-          <button class="btn bg" onclick="document.getElementById('gbl-search').value='';renderBusqueda()">✕</button>
+          <input type="text" id="gbl-search" placeholder="Remito, depósito, transporte, tipo..."
+            style="flex:1;padding:10px 14px;border:1.5px solid var(--border);border-radius:10px;font-size:.9rem;font-family:inherit;outline:none;transition:border .15s"/>
+          <button class="btn bg" onclick="limpiarBusqueda()">✕</button>
         </div>
       </div>
       <div id="gbl-results"></div>
@@ -494,15 +491,20 @@ tr.row-warn{background:rgba(217,119,6,.04)}
   </div><!-- /main -->
 
   <!-- MODO TV (pantalla completa oscura) -->
-  <div id="tv-overlay" style="display:none;position:fixed;inset:0;background:#0f172a;z-index:9000;overflow:auto;padding:24px;color:#fff">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
-      <div style="color:#f59e0b;font-size:1.4rem;font-weight:800">🚚 DistriLogis — Monitor en tiempo real</div>
-      <div style="display:flex;gap:12px;align-items:center">
-        <span id="tv-clock" style="color:rgba(255,255,255,.6);font-size:.9rem;font-family:'JetBrains Mono',monospace"></span>
-        <button onclick="closeTVMode()" style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:#fff;padding:8px 16px;border-radius:8px;cursor:pointer;font-family:inherit;font-size:.8rem">✕ Salir</button>
+  <div id="tv-overlay" style="display:none;position:fixed;inset:0;background:#0f172a;z-index:9000;color:#fff">
+    <!-- Capa bloqueadora: captura todo el mouse, impide selección -->
+    <div style="position:absolute;inset:0;z-index:9001" onmousedown="return false" onselectstart="return false" oncontextmenu="return false"></div>
+    <!-- Contenido por encima de la capa bloqueadora -->
+    <div style="position:relative;z-index:9002;padding:24px;height:100%;overflow:auto">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+        <div style="color:#f59e0b;font-size:1.4rem;font-weight:800">🚚 DistriLogis — Monitor en tiempo real</div>
+        <div style="display:flex;gap:12px;align-items:center">
+          <span id="tv-clock" style="color:rgba(255,255,255,.6);font-size:.9rem;font-family:'JetBrains Mono',monospace"></span>
+          <button onclick="closeTVMode()" style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:#fff;padding:8px 16px;border-radius:8px;cursor:pointer;font-family:inherit;font-size:.8rem;position:relative;z-index:9003">✕ Salir</button>
+        </div>
       </div>
+      <div id="tv-content"></div>
     </div>
-    <div id="tv-content"></div>
   </div>
 </div><!-- /app -->
 
@@ -557,7 +559,7 @@ tr.row-warn{background:rgba(217,119,6,.04)}
 // ═══════════════════════════════════════════
 // CONSTANTES
 // ═══════════════════════════════════════════
-const APP_VERSION = '20260415.1925'; // ← generado automáticamente por Claude al crear el archivo (YYYYMMDD.HHMM)
+const APP_VERSION = '20260416.0902'; // ← generado automáticamente por Claude al crear el archivo (YYYYMMDD.HHMM)
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbwNrWxDXyTFhtRMDkkTZl5_lN1fglUajnTuIlfpZEMknW9FPwXyzMnwcGAANaI53s0j/exec';
 const DEPOTS  = ['Pico','MDP','Bs As','Rosario'];
 const ROUTE_DEFS = [
@@ -838,9 +840,9 @@ const USERS_META = {
 };
 
 const NAV_ITEMS = {
-  admin:    [{id:'dashboard',icon:'📊',label:'Dashboard'},{id:'alta',icon:'➕',label:'Nuevo Envío'},{id:'envios',icon:'📦',label:'Todos los Envíos'},{id:'recepcion',icon:'📥',label:'Recepción'},{id:'rutas',icon:'🗺️',label:'Tiempos por Ruta'},{id:'transportes',icon:'🚛',label:'Transportes'},{id:'reporte',icon:'📈',label:'Reporte'},{id:'sistema',icon:'⚙️',label:'Sistema'},{id:'busqueda',icon:'🔍',label:'Búsqueda'}],
-  sucursal: [{id:'dashboard',icon:'📊',label:'Dashboard'},{id:'alta',icon:'➕',label:'Nuevo Envío'},{id:'envios',icon:'📦',label:'Todos los Envíos'},{id:'recepcion',icon:'📥',label:'Recepción'},{id:'rutas',icon:'🗺️',label:'Tiempos por Ruta'},{id:'busqueda',icon:'🔍',label:'Búsqueda'}],
-  readonly: [{id:'dashboard',icon:'📊',label:'Dashboard'},{id:'envios',icon:'📦',label:'Todos los Envíos'},{id:'rutas',icon:'🗺️',label:'Tiempos por Ruta'},{id:'busqueda',icon:'🔍',label:'Búsqueda'}],
+  admin:    [{id:'dashboard',icon:'📊',label:'Dashboard'},{id:'alta',icon:'➕',label:'Nuevo Envío'},{id:'envios',icon:'📦',label:'Todos los Envíos'},{id:'recepcion',icon:'📥',label:'Recepción'},{id:'rutas',icon:'🗺️',label:'Tiempos por Ruta'},{id:'transportes',icon:'🚛',label:'Transportes'},{id:'reporte',icon:'📈',label:'Reporte'},{id:'sistema',icon:'⚙️',label:'Sistema'}],
+  sucursal: [{id:'dashboard',icon:'📊',label:'Dashboard'},{id:'alta',icon:'➕',label:'Nuevo Envío'},{id:'envios',icon:'📦',label:'Todos los Envíos'},{id:'recepcion',icon:'📥',label:'Recepción'},{id:'rutas',icon:'🗺️',label:'Tiempos por Ruta'}],
+  readonly: [{id:'dashboard',icon:'📊',label:'Dashboard'},{id:'envios',icon:'📦',label:'Todos los Envíos'},{id:'rutas',icon:'🗺️',label:'Tiempos por Ruta'}],
 };
 
 let currentUser = null;
@@ -1113,10 +1115,6 @@ function show(viewId){
   if(viewId==='rutas')        renderRoutes();
   if(viewId==='transportes')  renderTransportesView();
   if(viewId==='sistema')      renderSistema();
-  if(viewId==='busqueda'){
-    renderBusqueda();
-    setTimeout(()=>{ const inp=document.getElementById('gbl-search'); if(inp) inp.focus(); }, 50);
-  }
   if(viewId==='reporte')      renderReporte();
 }
 
@@ -2108,68 +2106,6 @@ async function saveMinVersion(){
   }
 }
 
-// ═══════════════════════════════════════════
-// BÚSQUEDA GLOBAL
-// ═══════════════════════════════════════════
-function renderBusqueda(){
-  const q = (document.getElementById('gbl-search')?.value||'').toLowerCase().trim();
-  const el = document.getElementById('gbl-results');
-  if(!q){ el.innerHTML=`<div class="card"><div class="empty"><div class="empty-icon">🔍</div><div class="empty-text">Escribí para buscar en todos los envíos</div></div></div>`; return; }
-
-  const u=currentUser, isSuc=u.role==='sucursal', depot=u.depot;
-  let base=[...envios];
-  if(isSuc) base=base.filter(e=>e.origen===depot||e.destino===depot);
-
-  const results=base.filter(e=>
-    (e.remito||'').toLowerCase().includes(q)||
-    (e.origen||'').toLowerCase().includes(q)||
-    (e.destino||'').toLowerCase().includes(q)||
-    (e.transporte||'').toLowerCase().includes(q)||
-    (e.tipo||'').toLowerCase().includes(q)||
-    (e.modalidad||'').toLowerCase().includes(q)||
-    (e.obs||'').toLowerCase().includes(q)||
-    (e.obsRecv||'').toLowerCase().includes(q)
-  ).sort((a,b)=>{
-    // Pendientes primero, después por fecha desc
-    if(a.estado!==b.estado) return a.estado==='pendiente'?-1:1;
-    return (b.fecha||'').localeCompare(a.fecha||'');
-  });
-
-  if(!results.length){
-    el.innerHTML=`<div class="card"><div class="empty"><div class="empty-icon">😶</div><div class="empty-text">Sin resultados para "${q}"</div></div></div>`; return;
-  }
-
-  const modIcon={'Cajón':'📦','Pallet':'🟫','Bulto':'🎁'};
-  const modColor={'Cajón':'#dbeafe,#1e40af','Pallet':'#fef9c3,#854d0e','Bulto':'#dcfce7,#166534'};
-  const modBadgeFn=(mod,cant)=>{const [bg,co]=(modColor[mod]||'#f1f5f9,#475569').split(',');return mod?`<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:6px;font-size:.72rem;font-weight:700;background:${bg};color:${co}">${modIcon[mod]||'📫'} ${mod}${cant?' ×'+cant:''}</span>`:'—';};
-
-  const hl=(s)=>{
-    if(!s) return '—';
-    const re=new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`, 'gi');
-    return String(s).replace(re,'<mark style="background:#fef08a;border-radius:2px;padding:0 2px">$1</mark>');
-  };
-
-  el.innerHTML=`
-    <div style="font-size:.75rem;color:var(--text3);margin-bottom:10px;font-weight:600">${results.length} resultado${results.length!==1?'s':''}</div>
-    <div class="card" style="padding:0;overflow:hidden"><div class="tw"><table>
-      <thead><tr><th>Estado</th><th>Salida</th><th>Origen</th><th>Destino</th><th>Remito</th><th>Tipo</th><th>Bulto</th><th>Transporte</th><th>Notas</th><th>Llegada</th></tr></thead>
-      <tbody>${results.map(e=>{
-        const st=e.estado==='recibido'?'<span class="badge-ok badge">✅ Recibido</span>':(() => {const {status,hrs}=calcStatusCached(e);return sBadge(status)+` <span style="font-size:.68rem;color:var(--text3)">${fmtH(hrs)}</span>`;})();
-        return `<tr>
-          <td>${st}</td>
-          <td style="font-size:.75rem">${fmtDT(e.fecha)}</td>
-          <td><span class="chip">${hl(e.origen)}</span></td>
-          <td><span class="chip">${hl(e.destino)}</span></td>
-          <td class="mono" style="color:var(--blue-md);font-weight:600">${hl(e.remito)}</td>
-          <td style="font-size:.75rem">${hl(e.tipo)||'—'}</td>
-          <td>${modBadgeFn(e.modalidad,e.cantidad)}</td>
-          <td style="font-size:.75rem">${hl(e.transporte)||'—'}</td>
-          <td class="nota-cell">${hl(e.obs)||'—'}</td>
-          <td style="font-size:.75rem">${e.fechaLlegada?fmtDT(e.fechaLlegada):'—'}</td>
-        </tr>`;
-      }).join('')}</tbody>
-    </table></div></div>`;
-}
 
 // ═══════════════════════════════════════════
 // HISTORIAL DE CAMBIOS POR ENVÍO
@@ -2255,6 +2191,10 @@ function openTVMode(){
     const el=document.getElementById('tv-clock');
     if(el) el.textContent = new Date().toLocaleTimeString('es-AR',{timeZone:TZ,hour:'2-digit',minute:'2-digit',second:'2-digit'});
   }, 1000);
+  // Bloquear selección de texto completamente
+  const ov = document.getElementById('tv-overlay');
+  ov.addEventListener('mousedown', e=>{ if(e.target.id!=='tv-salir') e.preventDefault(); });
+  ov.addEventListener('selectstart', e=>e.preventDefault());
 }
 
 function closeTVMode(){
@@ -2266,7 +2206,7 @@ function closeTVMode(){
 function renderTV(){
   const pending = envios.filter(e=>e.estado==='pendiente');
   const modIcon={'Cajón':'📦','Pallet':'🟫','Bulto':'🎁'};
-  const cols=['var(--alert)','var(--warn)','#22c55e'];
+  const COL = 'grid-template-columns:110px 130px 1fr 170px 150px 160px';
 
   const depotCards = DEPOTS.map(dep=>{
     const items = pending.filter(e=>e.destino===dep)
@@ -2277,40 +2217,41 @@ function renderTV(){
       });
     const ac=items.filter(e=>calcStatusCached(e).status==='alert').length;
     const wc=items.filter(e=>calcStatusCached(e).status==='warn').length;
-    const headerColor=ac?'#dc2626':wc?'#d97706':'#16a34a';
-    const rows=items.map(e=>{
+
+    const header = `<div style="display:grid;${COL};gap:8px;padding:10px 14px;background:#1e3a5f;border-bottom:2px solid #f59e0b">
+      <span style="color:#f59e0b;font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.8px">⏱ Horas</span>
+      <span style="color:#f59e0b;font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.8px">📍 Origen</span>
+      <span style="color:#f59e0b;font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.8px">🔖 Remito</span>
+      <span style="color:#f59e0b;font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.8px">📦 Bulto</span>
+      <span style="color:#f59e0b;font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.8px">🚚 Transporte</span>
+      <span style="color:#f59e0b;font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.8px">🕐 Est. llegada</span>
+    </div>`;
+
+    const rows = items.map((e,i)=>{
       const {hrs,status}=calcStatusCached(e);
       const col=status==='alert'?'#ef4444':status==='warn'?'#f59e0b':'#4ade80';
+      const bg=i%2===0?'rgba(255,255,255,.04)':'rgba(255,255,255,.02)';
       const est=estimarLlegada(e);
       const estTxt=est?fmtDT(est.estimado.toISOString()):'—';
-      return `<tr style="border-bottom:1px solid rgba(255,255,255,.07)">
-        <td style="padding:10px 12px;color:${col};font-weight:700;font-size:.95rem;font-family:'JetBrains Mono',monospace">${fmtH(hrs)}</td>
-        <td style="padding:10px 12px;color:rgba(255,255,255,.85);font-size:.85rem"><span style="background:rgba(255,255,255,.12);color:#fff;padding:2px 8px;border-radius:6px">${e.origen}</span></td>
-        <td style="padding:10px 12px;color:#fff;font-family:'JetBrains Mono',monospace;font-size:.85rem">${e.remito}</td>
-        <td style="padding:10px 12px;color:rgba(255,255,255,.9);font-size:.85rem">${modIcon[e.modalidad]||'📫'} ${e.modalidad||'—'} ${e.cantidad?'×'+e.cantidad:''}</td>
-        <td style="padding:10px 12px;color:rgba(255,255,255,.7);font-size:.78rem">${e.transporte||'—'}</td>
-        <td style="padding:10px 12px;color:rgba(255,255,255,.6);font-size:.75rem">${estTxt}</td>
-      </tr>`;
+      const bulto=e.modalidad?(modIcon[e.modalidad]||'📫')+' '+e.modalidad+(e.cantidad?' ×'+e.cantidad:''):'—';
+      return `<div style="display:grid;${COL};gap:8px;padding:11px 14px;background:${bg};border-bottom:1px solid rgba(255,255,255,.05);align-items:center">
+        <span style="color:${col};font-weight:700;font-size:.95rem;font-family:'JetBrains Mono',monospace">${fmtH(hrs)}</span>
+        <span style="background:rgba(255,255,255,.12);color:#fff;padding:2px 8px;border-radius:6px;font-size:.82rem;display:inline-block">${e.origen}</span>
+        <span style="color:#fff;font-family:'JetBrains Mono',monospace;font-size:.82rem">${e.remito}</span>
+        <span style="color:rgba(255,255,255,.9);font-size:.82rem">${bulto}</span>
+        <span style="color:rgba(255,255,255,.7);font-size:.78rem">${e.transporte||'—'}</span>
+        <span style="color:rgba(255,255,255,.55);font-size:.75rem">${estTxt}</span>
+      </div>`;
     }).join('');
 
-    return `<div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:12px;overflow:hidden;margin-bottom:16px">
-      <div style="padding:14px 16px;background:rgba(255,255,255,.06);display:flex;align-items:center;gap:10px;border-bottom:1px solid rgba(255,255,255,.08)">
-        <span style="font-size:1.1rem;font-weight:800;color:#fff">🏭 ${dep}</span>
-        ${ac?`<span style="background:#dc2626;color:#fff;padding:2px 10px;border-radius:99px;font-size:.75rem;font-weight:700">🚨 ${ac} alerta${ac>1?'s':''}</span>`:''}
-        ${wc?`<span style="background:#d97706;color:#fff;padding:2px 10px;border-radius:99px;font-size:.75rem;font-weight:700">⚠️ ${wc} demorado${wc>1?'s':''}</span>`:''}
-        <span style="margin-left:auto;color:rgba(255,255,255,.4);font-size:.78rem">${items.length} pendiente${items.length!==1?'s':''}</span>
+    return `<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:12px;overflow:hidden;margin-bottom:16px">
+      <div style="padding:14px 16px;background:#152238;display:flex;align-items:center;gap:10px;border-bottom:1px solid rgba(255,255,255,.08)">
+        <span style="font-size:1.05rem;font-weight:800;color:#fff">🏭 ${dep}</span>
+        ${ac?`<span style="background:#dc2626;color:#fff;padding:2px 10px;border-radius:99px;font-size:.72rem;font-weight:700">🚨 ${ac} alerta${ac>1?'s':''}</span>`:''}
+        ${wc?`<span style="background:#d97706;color:#fff;padding:2px 10px;border-radius:99px;font-size:.72rem;font-weight:700">⚠️ ${wc} demorado${wc>1?'s':''}</span>`:''}
+        <span style="margin-left:auto;color:rgba(255,255,255,.4);font-size:.75rem">${items.length} pendiente${items.length!==1?'s':''}</span>
       </div>
-      ${items.length?`<table style="width:100%;border-collapse:collapse">
-        <thead><tr style="background:rgba(255,255,255,.03)">
-          <th style="padding:8px 12px;text-align:left;font-size:.65rem;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.5px">Horas</th>
-          <th style="padding:8px 12px;text-align:left;font-size:.65rem;color:rgba(255,255,255,.35);text-transform:uppercase">Origen</th>
-          <th style="padding:8px 12px;text-align:left;font-size:.65rem;color:rgba(255,255,255,.35);text-transform:uppercase">Remito</th>
-          <th style="padding:8px 12px;text-align:left;font-size:.65rem;color:rgba(255,255,255,.35);text-transform:uppercase">Bulto</th>
-          <th style="padding:8px 12px;text-align:left;font-size:.65rem;color:rgba(255,255,255,.35);text-transform:uppercase">Transporte</th>
-          <th style="padding:8px 12px;text-align:left;font-size:.65rem;color:rgba(255,255,255,.35);text-transform:uppercase">Est. llegada</th>
-        </tr></thead>
-        <tbody>${rows}</tbody>
-      </table>`:`<div style="padding:24px;text-align:center;color:rgba(255,255,255,.5);font-size:.85rem">✅ Sin pendientes</div>`}
+      ${items.length ? header+rows : '<div style="padding:24px;text-align:center;color:rgba(255,255,255,.4);font-size:.85rem">✅ Sin pendientes</div>'}
     </div>`;
   }).join('');
 
