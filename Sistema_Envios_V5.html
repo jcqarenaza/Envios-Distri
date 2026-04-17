@@ -545,7 +545,7 @@ tr.row-warn{background:rgba(217,119,6,.04)}
 // ═══════════════════════════════════════════
 // CONSTANTES
 // ═══════════════════════════════════════════
-const APP_VERSION = '20260416.1805'; // ← generado automáticamente por Claude al crear el archivo (YYYYMMDD.HHMM)
+const APP_VERSION = '20260417.0917'; // ← generado automáticamente por Claude al crear el archivo (YYYYMMDD.HHMM)
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbwNrWxDXyTFhtRMDkkTZl5_lN1fglUajnTuIlfpZEMknW9FPwXyzMnwcGAANaI53s0j/exec';
 const DEPOTS  = ['Pico','MDP','Bs As','Rosario'];
 const ROUTE_DEFS = [
@@ -1107,6 +1107,9 @@ function show(viewId){
 // ═══════════════════════════════════════════
 // HELPERS / FORMATTING
 // ═══════════════════════════════════════════
+// ─── CANTIDAD — nunca mostrar vacío, mínimo 1 ────────────────────────────────
+function normCant(c){ const n=parseInt(c); return (!n||n<1)?1:n; }
+
 // ─── TIMEZONE ───────────────────────────────────────────────────────────────
 // Usamos IANA 'America/Argentina/Buenos_Aires' en lugar de restar 3hs fijo.
 // Esto respeta correctamente el horario oficial sin importar DST ni dispositivo.
@@ -1378,7 +1381,7 @@ function renderEnvios(){
     const notaE=e.obs?`<td class="nota-cell" title="${e.obs}">${e.obs}</td>`:'<td>—</td>';
     const modIcon={'Cajón':'📦','Pallet':'🟫','Bulto':'🎁'};
     const modColor={'Cajón':'#dbeafe,#1e40af','Pallet':'#fef9c3,#854d0e','Bulto':'#dcfce7,#166534'};
-    const modBadgeFn=(mod,cant)=>{const [bg,co]=(modColor[mod]||'#f1f5f9,#475569').split(',');return mod?`<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:6px;font-size:.72rem;font-weight:700;background:${bg};color:${co}">${modIcon[mod]||'📫'} ${mod}${cant?' ×'+cant:''}</span>`:'<span style="color:var(--text3)">—</span>';};
+    const modBadgeFn=(mod,cant)=>{const [bg,co]=(modColor[mod]||'#f1f5f9,#475569').split(',');return mod?`<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:6px;font-size:.72rem;font-weight:700;background:${bg};color:${co}">${modIcon[mod]||'📫'} ${mod} ×${normCant(cant)}</span>`:'<span style="color:var(--text3)">—</span>';};
     const tipoBadgeFn=(t)=>t?`<span class="chip" style="background:#ede9fe;color:#6d28d9">${t}</span>`:'<span style="color:var(--text3)">—</span>';
     return `<tr class="${rCls(status)}"><td>${sBadge(status)}</td><td>${fmtDT(e.fecha)}</td><td class="mono" style="font-weight:700;color:${col}">${fmtH(hrs)}</td><td><span class="chip">${e.origen}</span></td><td><span class="chip">${e.destino}</span></td>${remitoCell(e)}<td>${tipoBadgeFn(e.tipo)}</td><td>${modBadgeFn(e.modalidad,e.cantidad)}</td><td>${e.transporte||'—'}</td>${notaE}<td>${fmtEstimado(e)}</td>${isAdmin?`<td style="display:flex;gap:4px"><button class="btn bs bsm" onclick="openModal('${e.id}')">Recibir</button><button class="btn bg bsm" onclick="showHistorialEnvio('${e.id}')" title="Historial">📋</button>${!e.isSeed?`<button class="btn bg bsm" onclick="delEnvio('${e.id}')" title="Eliminar">🗑</button>`:`<button class="btn bsm" style="background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0" onclick="delSeed('${e.id}')" title="Ocultar">🗑</button>`}</td>`:'<td></td>'}</tr>`;
   }).join(''):emptyR2(12);
@@ -1400,7 +1403,7 @@ function renderEnvios(){
     const notaD=e.obs?`<td class="nota-cell" title="${e.obs}">${e.obs}</td>`:'<td>—</td>';
     const modIcon={'Cajón':'📦','Pallet':'🟫','Bulto':'🎁'};
     const modColor={'Cajón':'#dbeafe,#1e40af','Pallet':'#fef9c3,#854d0e','Bulto':'#dcfce7,#166534'};
-    const modBadgeFn=(mod,cant)=>{const [bg,co]=(modColor[mod]||'#f1f5f9,#475569').split(',');return mod?`<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:6px;font-size:.72rem;font-weight:700;background:${bg};color:${co}">${modIcon[mod]||'📫'} ${mod}${cant?' ×'+cant:''}</span>`:'<span style="color:var(--text3)">—</span>';};
+    const modBadgeFn=(mod,cant)=>{const [bg,co]=(modColor[mod]||'#f1f5f9,#475569').split(',');return mod?`<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:6px;font-size:.72rem;font-weight:700;background:${bg};color:${co}">${modIcon[mod]||'📫'} ${mod} ×${normCant(cant)}</span>`:'<span style="color:var(--text3)">—</span>';};
     const tipoBadgeFn=(t)=>t?`<span class="chip" style="background:#ede9fe;color:#6d28d9">${t}</span>`:'<span style="color:var(--text3)">—</span>';
     return `<tr class="${rCls(status)}"><td>${sBadge(status)}</td><td>${isAdmin?`<input type="datetime-local" value="${e.fecha?e.fecha.slice(0,16):''}" onchange="editFechaDespacho('${e.id}',this.value)" style="font-size:.74rem;border:1px solid var(--border);border-radius:6px;padding:3px 6px;font-family:inherit">`:fmtDT(e.fecha)}</td><td class="mono" style="font-weight:700;color:${col}">${fmtH(hrs)}</td><td><span class="chip">${e.origen}</span></td><td><span class="chip">${e.destino}</span></td>${remitoCell(e)}<td>${tipoBadgeFn(e.tipo)}</td><td>${modBadgeFn(e.modalidad,e.cantidad)}</td><td>${e.transporte||'—'}</td>${notaD}<td>${fmtEstimado(e)}</td>${isAdmin?`<td style="display:flex;gap:4px"><button class="btn bs bsm" onclick="openModal('${e.id}')">Recibir</button><button class="btn bg bsm" onclick="showHistorialEnvio('${e.id}')" title="Historial">📋</button>${!e.isSeed?`<button class="btn bg bsm" onclick="delEnvio('${e.id}')" title="Eliminar">🗑</button>`:`<button class="btn bsm" style="background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0" onclick="delSeed('${e.id}')" title="Ocultar">🗑</button>`}</td>`:'<td></td>'}</tr>`;
   }).join(''):emptyR(isAdmin?12:11);
@@ -1420,7 +1423,7 @@ function renderEnvios(){
     const notaRec=e.obsRecv?`<td class="nota-cell recv" title="${e.obsRecv}">${e.obsRecv}</td>`:'<td style="color:var(--text3);font-size:.72rem">—</td>';
     const modIcon={'Cajón':'📦','Pallet':'🟫','Bulto':'🎁'};
     const modColor={'Cajón':'#dbeafe,#1e40af','Pallet':'#fef9c3,#854d0e','Bulto':'#dcfce7,#166534'};
-    const modBadgeFn=(mod,cant)=>{const [bg,co]=(modColor[mod]||'#f1f5f9,#475569').split(',');return mod?`<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:6px;font-size:.72rem;font-weight:700;background:${bg};color:${co}">${modIcon[mod]||'📫'} ${mod}${cant?' ×'+cant:''}</span>`:'<span style="color:var(--text3)">—</span>';};
+    const modBadgeFn=(mod,cant)=>{const [bg,co]=(modColor[mod]||'#f1f5f9,#475569').split(',');return mod?`<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:6px;font-size:.72rem;font-weight:700;background:${bg};color:${co}">${modIcon[mod]||'📫'} ${mod} ×${normCant(cant)}</span>`:'<span style="color:var(--text3)">—</span>';};
     const tipoBadgeFn=(t)=>t?`<span class="chip" style="background:#ede9fe;color:#6d28d9">${t}</span>`:'<span style="color:var(--text3)">—</span>';
     return `<tr><td>${fmtDT(e.fecha)}</td><td>${fmtDT(e.fechaLlegada)}</td><td><span class="chip">${e.origen}</span></td><td><span class="chip">${e.destino}</span></td>${remitoCell(e)}<td>${tipoBadgeFn(e.tipo)}</td><td>${modBadgeFn(e.modalidad,e.cantidad)}</td><td>${e.transporte||'—'}</td>${notaEnv}${notaRec}${isAdmin?`<td style="display:flex;gap:4px"><button class="btn bsm" style="background:var(--warn-lt);color:var(--warn);border:1px solid var(--warn-lt)" onclick="revertirRecepcion('${e.id}')" title="Volver a Pendiente">↩</button><button class="btn bg bsm" onclick="showHistorialEnvio('${e.id}')" title="Historial">📋</button>${!e.isSeed?`<button class="btn bg bsm" onclick="delEnvio('${e.id}')">🗑</button>`:''}${e.isSeed?`<button class="btn bsm" style="background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0;font-size:.65rem" onclick="delSeed('${e.id}')">🗑</button>`:''}</td>`:'<td></td>'}</tr>`;
   }).join(''):emptyH(isAdmin?11:10);
@@ -1461,7 +1464,7 @@ function filtrarHistorial(){
 
   const modIcon={'Cajón':'📦','Pallet':'🟫','Bulto':'🎁'};
   const modColor={'Cajón':'#dbeafe,#1e40af','Pallet':'#fef9c3,#854d0e','Bulto':'#dcfce7,#166534'};
-  const modBadgeFn=(mod,cant)=>{const [bg,co]=(modColor[mod]||'#f1f5f9,#475569').split(',');return mod?`<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:6px;font-size:.72rem;font-weight:700;background:${bg};color:${co}">${modIcon[mod]||'📫'} ${mod}${cant?' ×'+cant:''}</span>`:'<span style="color:var(--text3)">—</span>';};
+  const modBadgeFn=(mod,cant)=>{const [bg,co]=(modColor[mod]||'#f1f5f9,#475569').split(',');return mod?`<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:6px;font-size:.72rem;font-weight:700;background:${bg};color:${co}">${modIcon[mod]||'📫'} ${mod} ×${normCant(cant)}</span>`:'<span style="color:var(--text3)">—</span>';};
   const tipoBadgeFn=(t)=>t?`<span class="chip" style="background:#ede9fe;color:#6d28d9">${t}</span>`:'<span style="color:var(--text3)">—</span>';
   const remitoCell=(e)=>isAdmin?`<td class="mono" style="color:var(--blue-md);font-weight:600;padding:4px 10px"><input class="remito-edit" value="${e.remito}" data-orig="${e.remito}" onblur="editRemito('${e.id}',this)" onkeydown="if(event.key==='Enter')this.blur();if(event.key==='Escape'){this.value=this.dataset.orig;this.blur()}" title="Enter/Esc"/></td>`:`<td class="mono" style="color:var(--blue-md);font-weight:600">${e.remito}</td>`;
   const emptyH=n=>`<tr><td colspan="${n}"><div class="empty" style="padding:14px 0"><div class="empty-icon">${buscar?'🔍':'✅'}</div><div class="empty-text">${buscar?'Sin resultados':'Sin recibidos aún'}</div></div></td></tr>`;
@@ -1507,7 +1510,7 @@ function renderRecepcion(){
     const modKey=e.modalidad||'';
     const [mbg,mcol]=(modColor[modKey]||'#f1f5f9,#475569').split(',');
     const modBadge=modKey?`<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:6px;font-size:.72rem;font-weight:700;background:${mbg};color:${mcol}">${modIcon[modKey]||'📫'} ${modKey} ${e.cantidad||''}</span>`:'<span style="color:var(--text3)">—</span>';
-    return `<tr class="${rCls(status)}"><td>${sBadge(status)}</td><td class="mono" style="font-weight:700;color:${col}">${fmtH(hrs)}</td><td class="mono">${fmtH(nL)}/${fmtH(aL)}</td><td>${prog(hrs,nL,aL,status)}</td><td>${isAdmin?`<input type="datetime-local" value="${e.fecha?e.fecha.slice(0,16):''}" onchange="editFechaDespacho('${e.id}',this.value)" style="font-size:.74rem;border:1px solid var(--border);border-radius:6px;padding:3px 6px;font-family:inherit">`:fmtDT(e.fecha)}</td><td><span class="chip">${e.origen}</span></td><td><span class="chip">${e.destino}</span></td><td class="mono" style="color:var(--blue-md);font-weight:600">${e.remito}</td><td style="font-size:.75rem">${e.tipo||'—'}</td><td>${modBadge}</td><td style="text-align:center;font-weight:700">${e.cantidad||'—'}</td><td>${e.transporte||'—'}</td>${notaR}<td><button class="btn bs bsm" onclick="openModal('${e.id}')">✓ Recibir</button></td></tr>`;
+    return `<tr class="${rCls(status)}"><td>${sBadge(status)}</td><td class="mono" style="font-weight:700;color:${col}">${fmtH(hrs)}</td><td class="mono">${fmtH(nL)}/${fmtH(aL)}</td><td>${prog(hrs,nL,aL,status)}</td><td>${isAdmin?`<input type="datetime-local" value="${e.fecha?e.fecha.slice(0,16):''}" onchange="editFechaDespacho('${e.id}',this.value)" style="font-size:.74rem;border:1px solid var(--border);border-radius:6px;padding:3px 6px;font-family:inherit">`:fmtDT(e.fecha)}</td><td><span class="chip">${e.origen}</span></td><td><span class="chip">${e.destino}</span></td><td class="mono" style="color:var(--blue-md);font-weight:600">${e.remito}</td><td style="font-size:.75rem">${e.tipo||'—'}</td><td>${modBadge}</td><td style="text-align:center;font-weight:700">${${normCant(e.cantidad)}</td><td>${e.transporte||'—'}</td>${notaR}<td><button class="btn bs bsm" onclick="openModal('${e.id}')">✓ Recibir</button></td></tr>`;
   }).join(''):`<tr><td colspan="14"><div class="empty"><div class="empty-icon">📭</div><div class="empty-text">Sin envíos pendientes para ${recepcionDepot}</div></div></td></tr>`;
 }
 
@@ -1582,11 +1585,13 @@ function altaEnvio(){
   if(!remito){ toast('⚠ Ingresá el número de remito'); return; }
   if(!tipo){ toast('⚠ Seleccioná el tipo'); return; }
   if(!mod){ toast('⚠ Seleccioná la modalidad'); return; }
-  const cantNum = Number(cant);
-  if(!cant||isNaN(cantNum)||cantNum<1||!Number.isInteger(cantNum)){
+  const cantNum = Number(cant)||1;
+  if(isNaN(cantNum)||cantNum<1||!Number.isInteger(cantNum)){
     toast('⚠ La cantidad debe ser un número entero mayor a 0'); return;
   }
   if(cantNum>999){ toast('⚠ Cantidad fuera de rango (máx. 999)'); return; }
+  // Asegurar que el campo muestre el valor normalizado
+  document.getElementById('f-cant').value=cantNum;
   if(!tra){ toast('⚠ Seleccioná el transporte'); return; }
   if(origen===destino){ toast('⚠ Origen y destino no pueden ser iguales'); return; }
 
@@ -2315,7 +2320,7 @@ function renderTV(){
       const bg=i%2===0?'rgba(255,255,255,.04)':'rgba(255,255,255,.02)';
       const est=estimarLlegada(e);
       const estTxt=est?fmtDT(est.estimado.toISOString()):'—';
-      const bulto=e.modalidad?(modIcon[e.modalidad]||'📫')+' '+e.modalidad+(e.cantidad?' ×'+e.cantidad:''):'—';
+      const bulto=e.modalidad?(modIcon[e.modalidad]||'📫')+' '+e.modalidad+' ×'+normCant(e.cantidad):'—';
       return `<div style="display:grid;${COL};gap:8px;padding:11px 14px;background:${bg};border-bottom:1px solid rgba(255,255,255,.05);align-items:center">
         <span style="color:${col};font-weight:700;font-size:.95rem;font-family:'JetBrains Mono',monospace">${fmtH(hrs)}</span>
         <span style="background:rgba(255,255,255,.12);color:#fff;padding:2px 8px;border-radius:6px;font-size:.82rem;display:inline-block">${e.origen}</span>
