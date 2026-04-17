@@ -545,7 +545,7 @@ tr.row-warn{background:rgba(217,119,6,.04)}
 // ═══════════════════════════════════════════
 // CONSTANTES
 // ═══════════════════════════════════════════
-const APP_VERSION = '20260417.1021'; // ← generado automáticamente por Claude al crear el archivo (YYYYMMDD.HHMM)
+const APP_VERSION = '20260417.1215'; // ← generado automáticamente por Claude al crear el archivo (YYYYMMDD.HHMM)
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbwNrWxDXyTFhtRMDkkTZl5_lN1fglUajnTuIlfpZEMknW9FPwXyzMnwcGAANaI53s0j/exec';
 const DEPOTS  = ['Pico','MDP','Bs As','Rosario'];
 const ROUTE_DEFS = [
@@ -924,10 +924,49 @@ async function doLogin(){
   btn.textContent='Conectando...';
   btn.disabled=true;
 
-  // ── Un solo request: autenticación + todos los datos juntos ───────────
-  // loginAndLoad devuelve: { user, envios, rutas, transportes }
-  // Esto elimina 3-4 roundtrips y reduce el tiempo de login ~75%
-  loadState(); // datos locales previos como fallback inmediato
+  // ── Mostrar app al instante con datos del caché ───────────────────────
+  // Si hay datos locales del usuario, mostramos la app de inmediato
+  // y actualizamos en background — experiencia percibida: instantánea
+  loadState();
+  const hasCachedData = extras.length > 0;
+  const meta = USERS_META[u] || {};
+
+  // Intentar reconocer usuario con caché local para mostrar app al toque
+  if(hasCachedData && localStorage.getItem('dl_last_user') === u){
+    const LOCAL_PASS = { administrador:'tinchohack', pico:'pico', mdp:'mdp', bsas:'bsas', rosario:'rosario', telev:'telev' };
+    if(LOCAL_PASS[u] === p){
+      // Credenciales coinciden con fallback local → mostrar app YA
+      currentUser = {
+        id: u, role: meta.role, depot: meta.depot,
+        label: meta.label, color: meta.color||'#475569', _pass: p,
+      };
+      if(u) localStorage.setItem('dl_last_user', u);
+      btn.textContent='Ingresar'; btn.disabled=false;
+      startApp();
+      showToastLogin('⏳ Actualizando datos...');
+      // Actualizar datos en background sin bloquear
+      gasGet('loginAndLoad', { usuario: u, password: p }).then(res=>{
+        if(res && res.ok && res.data){
+          const d = res.data;
+          // Actualizar rol real del servidor
+          currentUser.role  = d.user.rol==='admin'?'admin':d.user.rol==='readonly'?'readonly':'sucursal';
+          currentUser.depot = d.user.depo || null;
+          currentUser.label = d.user.label || u;
+          if(d.envios?.length > 0){ extras=d.envios; changes={}; saveState(); rebuildEnvios(); }
+          if(d.rutas){ const hasNew=ROUTE_DEFS.some(r=>d.rutas[r.key]); if(hasNew){ routeThresholds=d.rutas; localStorage.setItem('dl_routes',JSON.stringify(routeThresholds)); } }
+          if(d.transportes){
+            if(d.transportes.lista){ ALL_TRANSPORTES.length=0; d.transportes.lista.forEach(t=>ALL_TRANSPORTES.push(t)); localStorage.setItem('dl_tra_list',JSON.stringify(ALL_TRANSPORTES)); }
+            if(d.transportes.depots){ Object.assign(depoTransportes,d.transportes.depots); localStorage.setItem('dl_transportes',JSON.stringify(depoTransportes)); }
+          }
+          // Re-renderizar vista activa con datos frescos
+          const av=document.querySelector('.view.active');
+          if(av){ const vid=av.id.replace('view-',''); if(vid==='dashboard') renderDash(); else if(vid==='envios') renderEnvios(); else if(vid==='recepcion') renderRecepcion(); }
+          updBadge(); showToastLogin('✅ Datos actualizados');
+        }
+      }).catch(()=>{ showToastLogin('⚠️ Datos del caché — sin conexión'); });
+      return;
+    }
+  }
 
   try {
     const res = await gasGet('loginAndLoad', { usuario: u, password: p });
@@ -2330,11 +2369,28 @@ function renderTV(){
 // INIT
 // ═══════════════════════════════════════════
 document.addEventListener('DOMContentLoaded',()=>{
-  // ⚠️ loadState() ya NO va acá — se llama dentro de doLogin()
-  // con el usuario correcto, después de validar credenciales.
   document.getElementById('mo-manual').addEventListener('click',e=>{ if(e.target.id==='mo-manual') closeManual(); });
   const lastUser=localStorage.getItem('dl_last_user');
   if(lastUser){ const sel=document.getElementById('login-user'); if(sel) sel.value=lastUser; }
+
+  // ── Ping preventivo al GAS para despertarlo antes de que el usuario ingrese ──
+  // GAS tiene "cold start" de ~20s si no fue usado. Este ping silencioso lo
+  // despierta mientras el usuario tipea la contraseña.
+  setTimeout(()=>{ gasGet('ping').catch(()=>{}); }, 500);
+
+  // ── Mostrar datos del caché inmediatamente si hay sesión previa ──────────
+  // Si el usuario ya se logueó antes, pre-cargamos el estado local para que
+  // la app se sienta instantánea. Los datos frescos llegan en background.
+  const cachedUser = localStorage.getItem('dl_last_user');
+  const cachedPass = localStorage.getItem('dl_last_pass'); // solo si existe
+  if(cachedUser && cachedPass){
+    const meta = USERS_META[cachedUser];
+    if(meta){
+      // Pre-mostrar login con usuario seleccionado
+      const sel = document.getElementById('login-user');
+      if(sel) sel.value = cachedUser;
+    }
+  }
 });
 
 // ═══════════════════════════════════════════
