@@ -420,7 +420,7 @@ tr.row-warn{background:rgba(217,119,6,.04)}
         <thead><tr>
           <th>Estado</th><th>Horas</th><th>Límite</th><th>Progreso</th>
           <th>Fecha Salida</th><th>Origen</th><th>Destino</th>
-          <th>Remito</th><th>Tipo</th><th>Bulto</th><th>Cant.</th><th>Transporte</th><th>Notas</th><th>Acción</th>
+          <th>Remito</th><th>Tipo</th><th>Bulto</th><th>Transporte</th><th>Notas</th><th>Acción</th>
         </tr></thead>
         <tbody id="tb-rec"></tbody>
       </table></div></div>
@@ -545,7 +545,7 @@ tr.row-warn{background:rgba(217,119,6,.04)}
 // ═══════════════════════════════════════════
 // CONSTANTES
 // ═══════════════════════════════════════════
-const APP_VERSION = '20260417.1215'; // ← generado automáticamente por Claude al crear el archivo (YYYYMMDD.HHMM)
+const APP_VERSION = '20260417.1706'; // ← generado automáticamente por Claude al crear el archivo (YYYYMMDD.HHMM)
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbwNrWxDXyTFhtRMDkkTZl5_lN1fglUajnTuIlfpZEMknW9FPwXyzMnwcGAANaI53s0j/exec';
 const DEPOTS  = ['Pico','MDP','Bs As','Rosario'];
 const ROUTE_DEFS = [
@@ -1527,11 +1527,10 @@ function renderRecepcion(){
     const notaR=e.obs?`<td class="nota-cell" title="${e.obs}">${e.obs}</td>`:'<td style="color:var(--text3)">—</td>';
     const modIcon={'Cajón':'📦','Pallet':'🟫','Bulto':'🎁'};
     const modColor={'Cajón':'#dbeafe,#1e40af','Pallet':'#fef9c3,#854d0e','Bulto':'#dcfce7,#166534'};
-    const modKey=e.modalidad||'';
-    const [mbg,mcol]=(modColor[modKey]||'#f1f5f9,#475569').split(',');
-    const modBadge=modKey?`<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:6px;font-size:.72rem;font-weight:700;background:${mbg};color:${mcol}">${modIcon[modKey]||'📫'} ${modKey} ${e.cantidad||''}</span>`:'<span style="color:var(--text3)">—</span>';
-    return `<tr class="${rCls(status)}"><td>${sBadge(status)}</td><td class="mono" style="font-weight:700;color:${col}">${fmtH(hrs)}</td><td class="mono">${fmtH(nL)}/${fmtH(aL)}</td><td>${prog(hrs,nL,aL,status)}</td><td>${isAdmin?`<input type="datetime-local" value="${e.fecha?e.fecha.slice(0,16):''}" onchange="editFechaDespacho('${e.id}',this.value)" style="font-size:.74rem;border:1px solid var(--border);border-radius:6px;padding:3px 6px;font-family:inherit">`:fmtDT(e.fecha)}</td><td><span class="chip">${e.origen}</span></td><td><span class="chip">${e.destino}</span></td><td class="mono" style="color:var(--blue-md);font-weight:600">${e.remito}</td><td style="font-size:.75rem">${e.tipo||'—'}</td><td>${modBadge}</td><td style="text-align:center;font-weight:700">${normCant(e.cantidad)}</td><td>${e.transporte||'—'}</td>${notaR}<td><button class="btn bs bsm" onclick="openModal('${e.id}')">✓ Recibir</button></td></tr>`;
-  }).join(''):`<tr><td colspan="14"><div class="empty"><div class="empty-icon">📭</div><div class="empty-text">Sin envíos pendientes para ${recepcionDepot}</div></div></td></tr>`;
+    const modBadgeFn=(mod,cant)=>{const modColor={'Cajón':'#dbeafe,#1e40af','Pallet':'#fef9c3,#854d0e','Bulto':'#dcfce7,#166534'};const modIcon={'Cajón':'📦','Pallet':'🟫','Bulto':'🎁'};const [bg,co]=(modColor[mod]||'#f1f5f9,#475569').split(',');return mod?`<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:6px;font-size:.72rem;font-weight:700;background:${bg};color:${co}">${modIcon[mod]||'📫'} ${mod} ×${normCant(cant)}</span>`:'<span style="color:var(--text3)">—</span>';};
+    const modBadge=modBadgeFn(e.modalidad,e.cantidad);
+    return `<tr class="${rCls(status)}"><td>${sBadge(status)}</td><td class="mono" style="font-weight:700;color:${col}">${fmtH(hrs)}</td><td class="mono">${fmtH(nL)}/${fmtH(aL)}</td><td>${prog(hrs,nL,aL,status)}</td><td>${isAdmin?`<input type="datetime-local" value="${e.fecha?e.fecha.slice(0,16):''}" onchange="editFechaDespacho('${e.id}',this.value)" style="font-size:.74rem;border:1px solid var(--border);border-radius:6px;padding:3px 6px;font-family:inherit">`:fmtDT(e.fecha)}</td><td><span class="chip">${e.origen}</span></td><td><span class="chip">${e.destino}</span></td><td class="mono" style="color:var(--blue-md);font-weight:600">${e.remito}</td><td style="font-size:.75rem">${e.tipo||'—'}</td><td>${modBadge}</td><td>${e.transporte||'—'}</td>${notaR}<td><button class="btn bs bsm" onclick="openModal('${e.id}')">✓ Recibir</button></td></tr>`;
+  }).join(''):`<tr><td colspan="13"><div class="empty"><div class="empty-icon">📭</div><div class="empty-text">Sin envíos pendientes para ${recepcionDepot}</div></div></td></tr>`;
 }
 
 // ═══════════════════════════════════════════
