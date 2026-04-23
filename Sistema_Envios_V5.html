@@ -146,6 +146,8 @@ tr.row-warn{background:rgba(217,119,6,.04)}
 /* REMITO EDIT */
 .remito-edit{border:none;background:transparent;font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--blue-md);font-weight:600;cursor:text;width:100%;padding:2px 4px;border-radius:4px;transition:background .15s}
 .remito-edit:hover,.remito-edit:focus{background:var(--blue-lt);outline:none}
+.inline-edit{border:none;background:transparent;font-size:.76rem;font-family:inherit;cursor:pointer;padding:2px 4px;border-radius:4px;color:var(--text);transition:background .15s;max-width:110px}
+.inline-edit:hover,.inline-edit:focus{background:var(--blue-lt);outline:none}
 /* ─── PROMEDIOS DE RUTA ─── */
 .avg-section{margin-bottom:20px}
 .avg-section-title{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);margin-bottom:10px}
@@ -525,6 +527,28 @@ tr.row-warn{background:rgba(217,119,6,.04)}
   </div>
 </div>
 
+<!-- MODAL EDICIÓN ENVÍO (admin) -->
+<div class="mo" id="mo-edit" style="z-index:500">
+  <div class="modal" style="width:560px">
+    <div class="confirm-title">✏️ Editar envío</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:16px 0">
+      <div class="fgr"><label>Fecha salida</label><input type="datetime-local" id="me-fecha" style="font-size:.82rem"/></div>
+      <div class="fgr"><label>N° de remito</label><input type="text" id="me-remito-input" style="font-family:'JetBrains Mono',monospace;font-size:.82rem" placeholder="0000-00000000"/></div>
+      <div class="fgr"><label>Destino</label><select id="me-destino"></select></div>
+      <div class="fgr"><label>Tipo</label><select id="me-tipo"><option>Web</option><option>Compras</option><option>Web + Compras</option></select></div>
+      <div class="fgr"><label>Modalidad</label><select id="me-modalidad"><option>Cajón</option><option>Pallet</option><option>Bulto</option></select></div>
+      <div class="fgr"><label>Cantidad</label><input type="number" id="me-cantidad" min="1" max="999"/></div>
+      <div class="fgr"><label>Transporte</label><select id="me-transporte"></select></div>
+      <div class="fgr" style="grid-column:1/-1"><label>Notas envío</label><input type="text" id="me-obs" placeholder="Opcional"/></div>
+      <div class="fgr" style="grid-column:1/-1"><label>Notas recepción</label><input type="text" id="me-obsRecv" placeholder="Opcional"/></div>
+    </div>
+    <div class="mf">
+      <button class="btn bg" onclick="document.getElementById('mo-edit').classList.remove('open')">Cancelar</button>
+      <button class="btn bs" onclick="guardarEdicion()">✓ Guardar</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL MANUAL -->
 <div id="mo-manual">
   <div class="manual-modal">
@@ -545,7 +569,7 @@ tr.row-warn{background:rgba(217,119,6,.04)}
 // ═══════════════════════════════════════════
 // CONSTANTES
 // ═══════════════════════════════════════════
-const APP_VERSION = '20260417.1706'; // ← generado automáticamente por Claude al crear el archivo (YYYYMMDD.HHMM)
+const APP_VERSION = '20260423.1709'; // ← generado automáticamente por Claude al crear el archivo (YYYYMMDD.HHMM)
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbwNrWxDXyTFhtRMDkkTZl5_lN1fglUajnTuIlfpZEMknW9FPwXyzMnwcGAANaI53s0j/exec';
 const DEPOTS  = ['Pico','MDP','Bs As','Rosario'];
 const ROUTE_DEFS = [
@@ -742,7 +766,18 @@ async function autoRefresh(){
         if(vid==='recepcion')  renderRecepcion();
       }
       const newPend = envios.filter(e=>e.estado==='pendiente').length;
-      if(newPend > prevCount) toast(`🔄 ${newPend - prevCount} envío${newPend-prevCount>1?'s':''} nuevo${newPend-prevCount>1?'s':''}`);
+      const diff = newPend - prevCount;
+      if(diff > 0){
+        // Notificación prominente con auto-dismiss
+        showNotif(`🔄 <strong>${diff} envío${diff>1?'s':''} nuevo${diff>1?'s':''}</strong> — actualizando vista`, 'info', 5000);
+        // Forzar refresco de vista activa si está en recepcion o envios
+        const av=document.querySelector('.view.active');
+        if(av){
+          const vid=av.id.replace('view-','');
+          if(vid==='recepcion') renderRecepcion();
+          if(vid==='envios')    renderEnvios();
+        }
+      }
       _lastRefresh = new Date();
     }
   } catch(e){ console.warn('[autoRefresh] error:', e.message); }
@@ -1151,7 +1186,8 @@ function nowMs(){
 function fmtDT(s){
   if(!s) return '—';
   const d=new Date(s); if(isNaN(d)) return s;
-  return d.toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'2-digit'})+' '+d.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'});
+  // Siempre en hora Argentina, sin importar la zona del dispositivo
+  return d.toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'2-digit',timeZone:TZ})+' '+d.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit',timeZone:TZ});
 }
 function fmtH(h){
   if(h==null||isNaN(h)) return '—';
@@ -1395,6 +1431,35 @@ function renderEnvios(){
   recvBadge.className='env-sec-badge '+(recvA?'alert':recvW?'warn':recvCount?'ok':'');
   document.getElementById('th-acciones3').style.display=isAdmin?'':'none';
   const remitoCell=(e)=>isAdmin?`<td class="mono" style="color:var(--blue-md);font-weight:600;padding:4px 10px"><input class="remito-edit" value="${e.remito}" data-orig="${e.remito}" onblur="editRemito('${e.id}',this)" onkeydown="if(event.key==='Enter')this.blur();if(event.key==='Escape'){this.value=this.dataset.orig;this.blur()}" title="Enter/Esc"/></td>`:`<td class="mono" style="color:var(--blue-md);font-weight:600">${e.remito}</td>`;
+
+  // Celdas editables inline para admin — usando data-id para evitar problemas de scope
+  const MODS = ['Cajón','Pallet','Bulto'];
+  const TIPOS_LIST = ['Web','Compras','Web + Compras'];
+  const inlineTraCell=(env)=>{
+    if(!isAdmin) return `<td>${env.transporte||'—'}</td>`;
+    const opts=ALL_TRANSPORTES.map(t=>`<option${t===env.transporte?' selected':''}>${t}</option>`).join('');
+    return `<td><select class="inline-edit" data-id="${env.id}" onchange="editCampo(this.dataset.id,'transporte',this.value)" style="max-width:120px">${opts}</select></td>`;
+  };
+  const inlineDestCell=(env)=>{
+    if(!isAdmin) return `<td><span class="chip">${env.destino}</span></td>`;
+    const opts=DEPOTS.filter(d=>d!==env.origen).map(d=>`<option${d===env.destino?' selected':''}>${d}</option>`).join('');
+    return `<td><select class="inline-edit" data-id="${env.id}" onchange="editCampo(this.dataset.id,'destino',this.value)">${opts}</select></td>`;
+  };
+  const inlineModCell=(env)=>{
+    if(!isAdmin){const modIcon={'Cajón':'📦','Pallet':'🟫','Bulto':'🎁'};const modColor={'Cajón':'#dbeafe,#1e40af','Pallet':'#fef9c3,#854d0e','Bulto':'#dcfce7,#166534'};const [bg,co]=(modColor[env.modalidad]||'#f1f5f9,#475569').split(',');return env.modalidad?`<td><span style="display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:6px;font-size:.72rem;font-weight:700;background:${bg};color:${co}">${modIcon[env.modalidad]||'📫'} ${env.modalidad} ×${normCant(env.cantidad)}</span></td>`:'<td>—</td>';}
+    const modOpts=MODS.map(m=>`<option${m===env.modalidad?' selected':''}>${m}</option>`).join('');
+    return `<td style="white-space:nowrap"><select class="inline-edit" data-id="${env.id}" onchange="editCampo(this.dataset.id,'modalidad',this.value)" style="max-width:75px">${modOpts}</select><input type="number" class="inline-edit" min="1" max="999" value="${normCant(env.cantidad)}" data-id="${env.id}" onchange="editCampo(this.dataset.id,'cantidad',Number(this.value)||1)" style="width:40px;text-align:center;margin-left:2px"/></td>`;
+  };
+  const inlineTipoCell=(env)=>{
+    if(!isAdmin) return `<td>${env.tipo?`<span class="chip" style="background:#ede9fe;color:#6d28d9">${env.tipo}</span>`:'—'}</td>`;
+    const opts=TIPOS_LIST.map(t=>`<option${t===env.tipo?' selected':''}>${t}</option>`).join('');
+    return `<td><select class="inline-edit" data-id="${env.id}" onchange="editCampo(this.dataset.id,'tipo',this.value)" style="max-width:110px">${opts}</select></td>`;
+  };
+  const inlineObsCell=(env)=>{
+    if(!isAdmin) return env.obs?`<td class="nota-cell" title="${env.obs}">${env.obs}</td>`:'<td>—</td>';
+    return `<td><input class="inline-edit" type="text" value="${(env.obs||'').replace(/"/g,'&quot;')}" data-id="${env.id}" onblur="editCampo(this.dataset.id,'obs',this.value)" onkeydown="if(event.key==='Enter')this.blur()" placeholder="Notas…" style="width:120px;font-size:.73rem"/></td>`;
+  };
+
   const emptyR2=n=>`<tr><td colspan="${n}"><div class="empty" style="padding:14px 0"><div class="empty-icon">📭</div><div class="empty-text">Sin envíos pendientes de recibir</div></div></td></tr>`;
   document.getElementById('tb-por-recibir').innerHTML=recvPendAll.length?recvPendAll.map(e=>{
     const {hrs,status}=calcStatusCached(e);const col=status==='alert'?'var(--alert)':status==='warn'?'var(--warn)':'var(--ok)';
@@ -1403,7 +1468,7 @@ function renderEnvios(){
     const modColor={'Cajón':'#dbeafe,#1e40af','Pallet':'#fef9c3,#854d0e','Bulto':'#dcfce7,#166534'};
     const modBadgeFn=(mod,cant)=>{const [bg,co]=(modColor[mod]||'#f1f5f9,#475569').split(',');return mod?`<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:6px;font-size:.72rem;font-weight:700;background:${bg};color:${co}">${modIcon[mod]||'📫'} ${mod} ×${normCant(cant)}</span>`:'<span style="color:var(--text3)">—</span>';};
     const tipoBadgeFn=(t)=>t?`<span class="chip" style="background:#ede9fe;color:#6d28d9">${t}</span>`:'<span style="color:var(--text3)">—</span>';
-    return `<tr class="${rCls(status)}"><td>${sBadge(status)}</td><td>${fmtDT(e.fecha)}</td><td class="mono" style="font-weight:700;color:${col}">${fmtH(hrs)}</td><td><span class="chip">${e.origen}</span></td><td><span class="chip">${e.destino}</span></td>${remitoCell(e)}<td>${tipoBadgeFn(e.tipo)}</td><td>${modBadgeFn(e.modalidad,e.cantidad)}</td><td>${e.transporte||'—'}</td>${notaE}<td>${fmtEstimado(e)}</td>${isAdmin?`<td style="display:flex;gap:4px"><button class="btn bs bsm" onclick="openModal('${e.id}')">Recibir</button><button class="btn bg bsm" onclick="showHistorialEnvio('${e.id}')" title="Historial">📋</button>${!e.isSeed?`<button class="btn bg bsm" onclick="delEnvio('${e.id}')" title="Eliminar">🗑</button>`:`<button class="btn bsm" style="background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0" onclick="delSeed('${e.id}')" title="Ocultar">🗑</button>`}</td>`:'<td></td>'}</tr>`;
+    return `<tr class="${rCls(status)}"><td>${sBadge(status)}</td><td>${fmtDT(e.fecha)}</td><td class="mono" style="font-weight:700;color:${col}">${fmtH(hrs)}</td><td><span class="chip">${e.origen}</span></td><td><span class="chip">${e.destino}</span></td>${remitoCell(e)}<td>${tipoBadgeFn(e.tipo)}</td><td>${modBadgeFn(e.modalidad,e.cantidad)}</td><td>${e.transporte||'—'}</td>${notaE}<td>${fmtEstimado(e)}</td>${isAdmin?`<td style="display:flex;gap:4px"><button class="btn bs bsm" onclick="openModal('${e.id}')">Recibir</button><button class="btn" style="background:#f0f9ff;color:#0369a1;border:1px solid #bae6fd;padding:4px 8px;border-radius:6px;font-size:.72rem" onclick="openEdicion('${e.id}')" title="Editar">✏️</button><button class="btn bg bsm" onclick="showHistorialEnvio('${e.id}')" title="Historial">📋</button>${!e.isSeed?`<button class="btn bg bsm" onclick="delEnvio('${e.id}')" title="Eliminar">🗑</button>`:`<button class="btn bsm" style="background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0" onclick="delSeed('${e.id}')" title="Ocultar">🗑</button>`}</td>`:'<td></td>'}</tr>`;
   }).join(''):emptyR2(12);
 
   // Sección despachados: solo visible para sucursales (lo que salió desde su depósito)
@@ -1425,7 +1490,7 @@ function renderEnvios(){
     const modColor={'Cajón':'#dbeafe,#1e40af','Pallet':'#fef9c3,#854d0e','Bulto':'#dcfce7,#166534'};
     const modBadgeFn=(mod,cant)=>{const [bg,co]=(modColor[mod]||'#f1f5f9,#475569').split(',');return mod?`<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:6px;font-size:.72rem;font-weight:700;background:${bg};color:${co}">${modIcon[mod]||'📫'} ${mod} ×${normCant(cant)}</span>`:'<span style="color:var(--text3)">—</span>';};
     const tipoBadgeFn=(t)=>t?`<span class="chip" style="background:#ede9fe;color:#6d28d9">${t}</span>`:'<span style="color:var(--text3)">—</span>';
-    return `<tr class="${rCls(status)}"><td>${sBadge(status)}</td><td>${isAdmin?`<input type="datetime-local" value="${e.fecha?e.fecha.slice(0,16):''}" onchange="editFechaDespacho('${e.id}',this.value)" style="font-size:.74rem;border:1px solid var(--border);border-radius:6px;padding:3px 6px;font-family:inherit">`:fmtDT(e.fecha)}</td><td class="mono" style="font-weight:700;color:${col}">${fmtH(hrs)}</td><td><span class="chip">${e.origen}</span></td><td><span class="chip">${e.destino}</span></td>${remitoCell(e)}<td>${tipoBadgeFn(e.tipo)}</td><td>${modBadgeFn(e.modalidad,e.cantidad)}</td><td>${e.transporte||'—'}</td>${notaD}<td>${fmtEstimado(e)}</td>${isAdmin?`<td style="display:flex;gap:4px"><button class="btn bs bsm" onclick="openModal('${e.id}')">Recibir</button><button class="btn bg bsm" onclick="showHistorialEnvio('${e.id}')" title="Historial">📋</button>${!e.isSeed?`<button class="btn bg bsm" onclick="delEnvio('${e.id}')" title="Eliminar">🗑</button>`:`<button class="btn bsm" style="background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0" onclick="delSeed('${e.id}')" title="Ocultar">🗑</button>`}</td>`:'<td></td>'}</tr>`;
+    return `<tr class="${rCls(status)}"><td>${sBadge(status)}</td><td>${fmtDT(e.fecha)}</td><td class="mono" style="font-weight:700;color:${col}">${fmtH(hrs)}</td><td><span class="chip">${e.origen}</span></td><td><span class="chip">${e.destino}</span></td>${remitoCell(e)}<td>${tipoBadgeFn(e.tipo)}</td><td>${modBadgeFn(e.modalidad,e.cantidad)}</td><td>${e.transporte||'—'}</td>${notaD}<td>${fmtEstimado(e)}</td>${isAdmin?`<td style="display:flex;gap:4px"><button class="btn bs bsm" onclick="openModal('${e.id}')">Recibir</button><button class="btn" style="background:#f0f9ff;color:#0369a1;border:1px solid #bae6fd;padding:4px 8px;border-radius:6px;font-size:.72rem" onclick="openEdicion('${e.id}')" title="Editar">✏️</button><button class="btn bg bsm" onclick="showHistorialEnvio('${e.id}')" title="Historial">📋</button>${!e.isSeed?`<button class="btn bg bsm" onclick="delEnvio('${e.id}')" title="Eliminar">🗑</button>`:`<button class="btn bsm" style="background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0" onclick="delSeed('${e.id}')" title="Ocultar">🗑</button>`}</td>`:'<td></td>'}</tr>`;
   }).join(''):emptyR(isAdmin?12:11);
 
   // Sección historial
@@ -1486,7 +1551,7 @@ function filtrarHistorial(){
   const modColor={'Cajón':'#dbeafe,#1e40af','Pallet':'#fef9c3,#854d0e','Bulto':'#dcfce7,#166534'};
   const modBadgeFn=(mod,cant)=>{const [bg,co]=(modColor[mod]||'#f1f5f9,#475569').split(',');return mod?`<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:6px;font-size:.72rem;font-weight:700;background:${bg};color:${co}">${modIcon[mod]||'📫'} ${mod} ×${normCant(cant)}</span>`:'<span style="color:var(--text3)">—</span>';};
   const tipoBadgeFn=(t)=>t?`<span class="chip" style="background:#ede9fe;color:#6d28d9">${t}</span>`:'<span style="color:var(--text3)">—</span>';
-  const remitoCell=(e)=>isAdmin?`<td class="mono" style="color:var(--blue-md);font-weight:600;padding:4px 10px"><input class="remito-edit" value="${e.remito}" data-orig="${e.remito}" onblur="editRemito('${e.id}',this)" onkeydown="if(event.key==='Enter')this.blur();if(event.key==='Escape'){this.value=this.dataset.orig;this.blur()}" title="Enter/Esc"/></td>`:`<td class="mono" style="color:var(--blue-md);font-weight:600">${e.remito}</td>`;
+    const remitoCell=(e)=>`<td class="mono" style="color:var(--blue-md);font-weight:600">${e.remito}</td>`;
   const emptyH=n=>`<tr><td colspan="${n}"><div class="empty" style="padding:14px 0"><div class="empty-icon">${buscar?'🔍':'✅'}</div><div class="empty-text">${buscar?'Sin resultados':'Sin recibidos aún'}</div></div></td></tr>`;
 
   const tb=document.getElementById('tb-historial');
@@ -1529,7 +1594,7 @@ function renderRecepcion(){
     const modColor={'Cajón':'#dbeafe,#1e40af','Pallet':'#fef9c3,#854d0e','Bulto':'#dcfce7,#166534'};
     const modBadgeFn=(mod,cant)=>{const modColor={'Cajón':'#dbeafe,#1e40af','Pallet':'#fef9c3,#854d0e','Bulto':'#dcfce7,#166534'};const modIcon={'Cajón':'📦','Pallet':'🟫','Bulto':'🎁'};const [bg,co]=(modColor[mod]||'#f1f5f9,#475569').split(',');return mod?`<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:6px;font-size:.72rem;font-weight:700;background:${bg};color:${co}">${modIcon[mod]||'📫'} ${mod} ×${normCant(cant)}</span>`:'<span style="color:var(--text3)">—</span>';};
     const modBadge=modBadgeFn(e.modalidad,e.cantidad);
-    return `<tr class="${rCls(status)}"><td>${sBadge(status)}</td><td class="mono" style="font-weight:700;color:${col}">${fmtH(hrs)}</td><td class="mono">${fmtH(nL)}/${fmtH(aL)}</td><td>${prog(hrs,nL,aL,status)}</td><td>${isAdmin?`<input type="datetime-local" value="${e.fecha?e.fecha.slice(0,16):''}" onchange="editFechaDespacho('${e.id}',this.value)" style="font-size:.74rem;border:1px solid var(--border);border-radius:6px;padding:3px 6px;font-family:inherit">`:fmtDT(e.fecha)}</td><td><span class="chip">${e.origen}</span></td><td><span class="chip">${e.destino}</span></td><td class="mono" style="color:var(--blue-md);font-weight:600">${e.remito}</td><td style="font-size:.75rem">${e.tipo||'—'}</td><td>${modBadge}</td><td>${e.transporte||'—'}</td>${notaR}<td><button class="btn bs bsm" onclick="openModal('${e.id}')">✓ Recibir</button></td></tr>`;
+    return `<tr class="${rCls(status)}"><td>${sBadge(status)}</td><td class="mono" style="font-weight:700;color:${col}">${fmtH(hrs)}</td><td class="mono">${fmtH(nL)}/${fmtH(aL)}</td><td>${prog(hrs,nL,aL,status)}</td><td>${fmtDT(e.fecha)}</td><td><span class="chip">${e.origen}</span></td><td><span class="chip">${e.destino}</span></td><td class="mono" style="color:var(--blue-md);font-weight:600">${e.remito}</td><td style="font-size:.75rem">${e.tipo||'—'}</td><td>${modBadge}</td><td>${e.transporte||'—'}</td>${notaR}<td><button class="btn bs bsm" onclick="openModal('${e.id}')">✓ Recibir</button></td></tr>`;
   }).join(''):`<tr><td colspan="13"><div class="empty"><div class="empty-icon">📭</div><div class="empty-text">Sin envíos pendientes para ${recepcionDepot}</div></div></td></tr>`;
 }
 
@@ -1786,6 +1851,116 @@ function editFechaDespacho(id,nuevaFecha){
   saveState(); rebuildEnvios();
   toast('✓ Fecha actualizada');
   gasSend('editFechaDespacho',{id,fecha:nuevaFecha});
+}
+
+function editCampo(id, campo, valor, gasCampo){
+  if(valor===null||valor===undefined||valor==='') return;
+  if(id.startsWith('seed-')){ changes[id]=Object.assign({},changes[id]||{},{[campo]:valor}); }
+  else { const idx=extras.findIndex(x=>x.id===id); if(idx>=0) extras[idx][campo]=valor; }
+  saveState(); rebuildEnvios();
+  toast(`✓ ${campo.charAt(0).toUpperCase()+campo.slice(1)} actualizado`);
+  logCambio(id, 'EDICIÓN', `${campo}: ${valor}`);
+  gasSend('editCampo', {id, campo: gasCampo||campo, valor});
+}
+
+let _editId = null;
+function openEdicion(id){
+  const e = envios.find(x=>x.id===id);
+  if(!e) return;
+  _editId = id;
+  document.getElementById('me-remito-input').value = e.remito;
+  document.getElementById('me-fecha').value = e.fecha ? e.fecha.slice(0,16) : '';
+  // Destino
+  const destSel = document.getElementById('me-destino');
+  destSel.innerHTML = DEPOTS.filter(d=>d!==e.origen).map(d=>`<option${d===e.destino?' selected':''}>${d}</option>`).join('');
+  // Tipo
+  const tipoSel = document.getElementById('me-tipo');
+  ['Web','Compras','Web + Compras'].forEach(t=>{ const o=tipoSel.querySelector(`option[value="${t}"]`)||[...tipoSel.options].find(o=>o.value===t); if(o) o.selected=t===e.tipo; });
+  document.getElementById('me-modalidad').value = e.modalidad || 'Cajón';
+  document.getElementById('me-cantidad').value = normCant(e.cantidad);
+  // Transporte
+  const traSel = document.getElementById('me-transporte');
+  traSel.innerHTML = ALL_TRANSPORTES.map(t=>`<option${t===e.transporte?' selected':''}>${t}</option>`).join('');
+  document.getElementById('me-obs').value = e.obs || '';
+  document.getElementById('me-obsRecv').value = e.obsRecv || '';
+  document.getElementById('mo-edit').classList.add('open');
+}
+
+function guardarEdicion(){
+  if(!_editId) return;
+  const id = _editId;
+  const e = envios.find(x=>x.id===id);
+  if(!e) return;
+
+  const nuevoRemito = document.getElementById('me-remito-input').value.trim();
+  if(!nuevoRemito){ toast('⚠ El remito no puede estar vacío'); return; }
+
+  // Validar remito si cambió
+  if(nuevoRemito !== e.remito){
+    // Duplicado exacto
+    if(envios.find(x=>x.id!==id && x.remito===nuevoRemito)){
+      toast('⚠ Ese remito ya existe — no se puede usar'); return;
+    }
+    // Similar (mismo número de comprobante)
+    const normNuevo = _normRemito(nuevoRemito);
+    const similar = envios.find(x=>x.id!==id && _normRemito(x.remito)===normNuevo);
+    if(similar){
+      dlConfirm(
+        'Remito similar',
+        `El número de comprobante ${normNuevo} ya existe en ${similar.remito} (${similar.origen}→${similar.destino}). ¿Confirmás que son distintos?`,
+        ()=>_aplicarEdicion(id, nuevoRemito)
+      );
+      return;
+    }
+  }
+
+  _aplicarEdicion(id, nuevoRemito);
+}
+
+function _aplicarEdicion(id, nuevoRemito){
+  const e = envios.find(x=>x.id===id);
+  if(!e) return;
+
+  const campos = {
+    remito:    nuevoRemito,
+    fecha:     document.getElementById('me-fecha').value,
+    destino:   document.getElementById('me-destino').value,
+    tipo:      document.getElementById('me-tipo').value,
+    modalidad: document.getElementById('me-modalidad').value,
+    cantidad:  Number(document.getElementById('me-cantidad').value)||1,
+    transporte:document.getElementById('me-transporte').value,
+    obs:       document.getElementById('me-obs').value.trim(),
+    obsRecv:   document.getElementById('me-obsRecv').value.trim(),
+  };
+
+  // Aplicar remito
+  if(campos.remito !== e.remito){
+    if(id.startsWith('seed-')){ changes[id]=Object.assign({},changes[id]||{},{remito:campos.remito}); }
+    else { const idx=extras.findIndex(x=>x.id===id); if(idx>=0) extras[idx].remito=campos.remito; }
+    logCambio(id, 'EDICIÓN', `remito: ${e.remito} → ${campos.remito}`);
+    gasSend('editCampo',{id,campo:'remito',valor:campos.remito});
+  }
+
+  // Aplicar fecha
+  if(campos.fecha && campos.fecha !== (e.fecha||'').slice(0,16)){
+    editFechaDespacho(id, campos.fecha);
+  }
+
+  // Aplicar resto de campos
+  const camposSimples = ['destino','tipo','modalidad','cantidad','transporte','obs','obsRecv'];
+  camposSimples.forEach(campo=>{
+    const val = campos[campo];
+    const orig = String(e[campo]||'');
+    if(String(val) !== orig){
+      editCampo(id, campo, val);
+    }
+  });
+
+  saveState(); rebuildEnvios();
+  document.getElementById('mo-edit').classList.remove('open');
+  toast('✅ Envío actualizado');
+  logCambio(id, 'EDICIÓN', 'Modal de edición completa');
+  renderEnvios();
 }
 
 function revertirRecepcion(id){
