@@ -569,7 +569,7 @@ tr.row-warn{background:rgba(217,119,6,.04)}
 // ═══════════════════════════════════════════
 // CONSTANTES
 // ═══════════════════════════════════════════
-const APP_VERSION = '20260423.1709'; // ← generado automáticamente por Claude al crear el archivo (YYYYMMDD.HHMM)
+const APP_VERSION = '20260424.0803'; // ← generado automáticamente por Claude al crear el archivo (YYYYMMDD.HHMM)
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbwNrWxDXyTFhtRMDkkTZl5_lN1fglUajnTuIlfpZEMknW9FPwXyzMnwcGAANaI53s0j/exec';
 const DEPOTS  = ['Pico','MDP','Bs As','Rosario'];
 const ROUTE_DEFS = [
@@ -789,7 +789,15 @@ async function autoRefresh(){
 
 function startAutoRefresh(){
   if(_refreshTimer) clearInterval(_refreshTimer);
-  _refreshTimer = setInterval(autoRefresh, 2 * 60 * 1000); // cada 2 minutos
+  _refreshTimer = setInterval(autoRefresh, 20 * 1000); // cada 20 segundos
+
+  // Refresh inmediato al volver a la pestaña o ventana
+  document.addEventListener('visibilitychange', ()=>{
+    if(!document.hidden && currentUser) autoRefresh();
+  });
+  window.addEventListener('focus', ()=>{
+    if(currentUser) autoRefresh();
+  });
 }
 function stopAutoRefresh(){
   if(_refreshTimer){ clearInterval(_refreshTimer); _refreshTimer=null; }
