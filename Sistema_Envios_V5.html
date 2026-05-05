@@ -569,7 +569,7 @@ tr.row-warn{background:rgba(217,119,6,.04)}
 // ═══════════════════════════════════════════
 // CONSTANTES
 // ═══════════════════════════════════════════
-const APP_VERSION = '20260424.0803'; // ← generado automáticamente por Claude al crear el archivo (YYYYMMDD.HHMM)
+const APP_VERSION = '20260505.1658'; // ← generado automáticamente por Claude al crear el archivo (YYYYMMDD.HHMM)
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbwNrWxDXyTFhtRMDkkTZl5_lN1fglUajnTuIlfpZEMknW9FPwXyzMnwcGAANaI53s0j/exec';
 const DEPOTS  = ['Pico','MDP','Bs As','Rosario'];
 const ROUTE_DEFS = [
@@ -659,6 +659,10 @@ async function flushSyncQueue(manual=false){
   syncQueue = failed;
   saveSyncQueue();
   updSyncBadge(lastError, manual);
+  // Aviso visible si hay cambios que no pudieron sincronizarse
+  if(failed.length && !manual){
+    showNotif(`⚠️ <strong>${failed.length} cambio${failed.length>1?'s':''} pendiente${failed.length>1?'s':''} de sincronizar</strong> — se reintentará automáticamente`, 'warn', 6000);
+  }
 }
 
 function updSyncBadge(lastError='', manual=false){
@@ -1376,12 +1380,22 @@ function renderDash(){
   const stats=dashPend.map(e=>calcStatusCached(e).status);
   const ac=stats.filter(s=>s==='alert').length, wc=stats.filter(s=>s==='warn').length;
   const total=isSuc?dashPend.length+dashRecv.length:envios.length;
+
+  // Recibidos hoy (en hora Argentina)
+  const hoyAR = nowAR().toLocaleDateString('sv-SE',{timeZone:TZ});
+  const recibidosHoy = dashRecv.filter(e=>e.fechaLlegada && e.fechaLlegada.slice(0,10)===hoyAR).length;
+  // Promedio de tránsito (últimos 30 días)
+  const d30 = new Date(nowAR()-30*24*3600*1000);
+  const recientes = dashRecv.filter(e=>e.fechaLlegada && new Date(e.fechaLlegada)>=d30 && e.fecha);
+  const avgH = recientes.length ? recientes.reduce((acc,e)=>acc+weekdayHours(effectiveStart(e.fecha),new Date(e.fechaLlegada)),0)/recientes.length : null;
+
   document.getElementById('sg').innerHTML=`
     <div class="stat blue"><div class="sl">Total</div><div class="sv">${total}</div><div class="sd">${isSuc?'hacia '+depot:'envíos registrados'}</div></div>
-    <div class="stat blue"><div class="sl">Pendientes</div><div class="sv">${dashPend.length}</div><div class="sd">en tránsito</div></div>
-    <div class="stat ok"><div class="sl">Recibidos</div><div class="sv">${dashRecv.length}</div><div class="sd">confirmados</div></div>
-    <div class="stat warn"><div class="sl">Demorados</div><div class="sv">${wc}</div><div class="sd">fuera de tiempo normal</div></div>
-    <div class="stat alert"><div class="sl">🚨 Alertas</div><div class="sv">${ac}</div><div class="sd">atención inmediata</div></div>`;
+    <div class="stat blue"><div class="sl">En tránsito</div><div class="sv">${dashPend.length}</div><div class="sd">pendientes de recibir</div></div>
+    <div class="stat ok"><div class="sl">✅ Recibidos hoy</div><div class="sv">${recibidosHoy}</div><div class="sd">${dashRecv.length} total histórico</div></div>
+    <div class="stat warn"><div class="sl">⚠️ Demorados</div><div class="sv">${wc}</div><div class="sd">fuera de tiempo normal</div></div>
+    <div class="stat alert"><div class="sl">🚨 Alertas</div><div class="sv">${ac}</div><div class="sd">atención inmediata</div></div>
+    ${avgH!=null?`<div class="stat" style="background:var(--surface2)"><div class="sl">⏱ Prom. tránsito</div><div class="sv" style="font-size:1.4rem">${fmtH(avgH)}</div><div class="sd">últimos 30 días</div></div>`:''}`;
   let html='';
   if(ac){ const list=dashPend.filter(e=>calcStatusCached(e).status==='alert').sort((a,b)=>a.fecha.localeCompare(b.fecha)); html+=`<div class="ab alert"><div class="ai">🚨</div><div class="abo"><div class="at">${ac} envío${ac>1?'s':''} en ALERTA</div><div class="ad">${list.map(e=>`<strong>${e.remito}</strong> (${e.origen}→${e.destino}, ${fmtH(calcStatusCached(e).hrs)})`).join(' · ')}</div></div></div>`; }
   if(wc){ const list=dashPend.filter(e=>calcStatusCached(e).status==='warn').sort((a,b)=>a.fecha.localeCompare(b.fecha)); html+=`<div class="ab warn"><div class="ai">⚠️</div><div class="abo"><div class="at">${wc} envío${wc>1?'s':''} demorado${wc>1?'s':''}</div><div class="ad">${list.map(e=>`<strong>${e.remito}</strong> (${e.origen}→${e.destino}, ${fmtH(calcStatusCached(e).hrs)})`).join(' · ')}</div></div></div>`; }
@@ -1440,33 +1454,7 @@ function renderEnvios(){
   document.getElementById('th-acciones3').style.display=isAdmin?'':'none';
   const remitoCell=(e)=>isAdmin?`<td class="mono" style="color:var(--blue-md);font-weight:600;padding:4px 10px"><input class="remito-edit" value="${e.remito}" data-orig="${e.remito}" onblur="editRemito('${e.id}',this)" onkeydown="if(event.key==='Enter')this.blur();if(event.key==='Escape'){this.value=this.dataset.orig;this.blur()}" title="Enter/Esc"/></td>`:`<td class="mono" style="color:var(--blue-md);font-weight:600">${e.remito}</td>`;
 
-  // Celdas editables inline para admin — usando data-id para evitar problemas de scope
-  const MODS = ['Cajón','Pallet','Bulto'];
-  const TIPOS_LIST = ['Web','Compras','Web + Compras'];
-  const inlineTraCell=(env)=>{
-    if(!isAdmin) return `<td>${env.transporte||'—'}</td>`;
-    const opts=ALL_TRANSPORTES.map(t=>`<option${t===env.transporte?' selected':''}>${t}</option>`).join('');
-    return `<td><select class="inline-edit" data-id="${env.id}" onchange="editCampo(this.dataset.id,'transporte',this.value)" style="max-width:120px">${opts}</select></td>`;
-  };
-  const inlineDestCell=(env)=>{
-    if(!isAdmin) return `<td><span class="chip">${env.destino}</span></td>`;
-    const opts=DEPOTS.filter(d=>d!==env.origen).map(d=>`<option${d===env.destino?' selected':''}>${d}</option>`).join('');
-    return `<td><select class="inline-edit" data-id="${env.id}" onchange="editCampo(this.dataset.id,'destino',this.value)">${opts}</select></td>`;
-  };
-  const inlineModCell=(env)=>{
-    if(!isAdmin){const modIcon={'Cajón':'📦','Pallet':'🟫','Bulto':'🎁'};const modColor={'Cajón':'#dbeafe,#1e40af','Pallet':'#fef9c3,#854d0e','Bulto':'#dcfce7,#166534'};const [bg,co]=(modColor[env.modalidad]||'#f1f5f9,#475569').split(',');return env.modalidad?`<td><span style="display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:6px;font-size:.72rem;font-weight:700;background:${bg};color:${co}">${modIcon[env.modalidad]||'📫'} ${env.modalidad} ×${normCant(env.cantidad)}</span></td>`:'<td>—</td>';}
-    const modOpts=MODS.map(m=>`<option${m===env.modalidad?' selected':''}>${m}</option>`).join('');
-    return `<td style="white-space:nowrap"><select class="inline-edit" data-id="${env.id}" onchange="editCampo(this.dataset.id,'modalidad',this.value)" style="max-width:75px">${modOpts}</select><input type="number" class="inline-edit" min="1" max="999" value="${normCant(env.cantidad)}" data-id="${env.id}" onchange="editCampo(this.dataset.id,'cantidad',Number(this.value)||1)" style="width:40px;text-align:center;margin-left:2px"/></td>`;
-  };
-  const inlineTipoCell=(env)=>{
-    if(!isAdmin) return `<td>${env.tipo?`<span class="chip" style="background:#ede9fe;color:#6d28d9">${env.tipo}</span>`:'—'}</td>`;
-    const opts=TIPOS_LIST.map(t=>`<option${t===env.tipo?' selected':''}>${t}</option>`).join('');
-    return `<td><select class="inline-edit" data-id="${env.id}" onchange="editCampo(this.dataset.id,'tipo',this.value)" style="max-width:110px">${opts}</select></td>`;
-  };
-  const inlineObsCell=(env)=>{
-    if(!isAdmin) return env.obs?`<td class="nota-cell" title="${env.obs}">${env.obs}</td>`:'<td>—</td>';
-    return `<td><input class="inline-edit" type="text" value="${(env.obs||'').replace(/"/g,'&quot;')}" data-id="${env.id}" onblur="editCampo(this.dataset.id,'obs',this.value)" onkeydown="if(event.key==='Enter')this.blur()" placeholder="Notas…" style="width:120px;font-size:.73rem"/></td>`;
-  };
+  // (edición via modal ✏️ — ver openEdicion())
 
   const emptyR2=n=>`<tr><td colspan="${n}"><div class="empty" style="padding:14px 0"><div class="empty-icon">📭</div><div class="empty-text">Sin envíos pendientes de recibir</div></div></td></tr>`;
   document.getElementById('tb-por-recibir').innerHTML=recvPendAll.length?recvPendAll.map(e=>{
@@ -1527,48 +1515,6 @@ function toggleHistorial(){
   const open=body.style.display!=='none';
   body.style.display=open?'none':'block';
   document.getElementById('hist-toggle-icon').textContent=open?'▶':'▼';
-}
-
-// Filtra solo el historial sin reconstruir toda la vista
-function filtrarHistorial(){
-  const buscar=(document.getElementById('hist-search')?.value||'').toLowerCase().trim();
-  const isAdmin=currentUser?.role==='admin';
-  const recibidos=[...envios].filter(e=>e.estado==='recibido').sort((a,b)=>(b.fechaLlegada||'').localeCompare(a.fechaLlegada||''));
-  let hist=recibidos;
-  if(buscar) hist=hist.filter(e=>
-    (e.remito||'').toLowerCase().includes(buscar)||
-    (e.origen||'').toLowerCase().includes(buscar)||
-    (e.destino||'').toLowerCase().includes(buscar)||
-    (e.transporte||'').toLowerCase().includes(buscar)||
-    (e.tipo||'').toLowerCase().includes(buscar)||
-    (e.modalidad||'').toLowerCase().includes(buscar)||
-    (e.obs||'').toLowerCase().includes(buscar)||
-    (e.obsRecv||'').toLowerCase().includes(buscar)
-  );
-  // Actualizar badge
-  const histBadge=document.getElementById('sec-hist-badge');
-  if(histBadge){
-    histBadge.textContent=buscar?`${hist.length} resultado${hist.length!==1?'s':''}`:' ';
-    histBadge.className='env-sec-badge'+(buscar&&hist.length?' ok':buscar&&!hist.length?' alert':'');
-  }
-  // Actualizar título
-  const histTitle=document.getElementById('sec-hist-title');
-  if(histTitle) histTitle.textContent=`Historial — ${recibidos.length} recibido${recibidos.length!==1?'s':''}`;
-
-  const modIcon={'Cajón':'📦','Pallet':'🟫','Bulto':'🎁'};
-  const modColor={'Cajón':'#dbeafe,#1e40af','Pallet':'#fef9c3,#854d0e','Bulto':'#dcfce7,#166534'};
-  const modBadgeFn=(mod,cant)=>{const [bg,co]=(modColor[mod]||'#f1f5f9,#475569').split(',');return mod?`<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:6px;font-size:.72rem;font-weight:700;background:${bg};color:${co}">${modIcon[mod]||'📫'} ${mod} ×${normCant(cant)}</span>`:'<span style="color:var(--text3)">—</span>';};
-  const tipoBadgeFn=(t)=>t?`<span class="chip" style="background:#ede9fe;color:#6d28d9">${t}</span>`:'<span style="color:var(--text3)">—</span>';
-    const remitoCell=(e)=>`<td class="mono" style="color:var(--blue-md);font-weight:600">${e.remito}</td>`;
-  const emptyH=n=>`<tr><td colspan="${n}"><div class="empty" style="padding:14px 0"><div class="empty-icon">${buscar?'🔍':'✅'}</div><div class="empty-text">${buscar?'Sin resultados':'Sin recibidos aún'}</div></div></td></tr>`;
-
-  const tb=document.getElementById('tb-historial');
-  if(!tb) return;
-  tb.innerHTML=hist.length?hist.map(e=>{
-    const notaEnv=e.obs?`<td class="nota-cell" title="${e.obs}">${e.obs}</td>`:'<td style="color:var(--text3);font-size:.72rem">—</td>';
-    const notaRec=e.obsRecv?`<td class="nota-cell recv" title="${e.obsRecv}">${e.obsRecv}</td>`:'<td style="color:var(--text3);font-size:.72rem">—</td>';
-    return `<tr><td>${fmtDT(e.fecha)}</td><td>${fmtDT(e.fechaLlegada)}</td><td><span class="chip">${e.origen}</span></td><td><span class="chip">${e.destino}</span></td>${remitoCell(e)}<td>${tipoBadgeFn(e.tipo)}</td><td>${modBadgeFn(e.modalidad,e.cantidad)}</td><td>${e.transporte||'—'}</td>${notaEnv}${notaRec}${isAdmin?`<td style="display:flex;gap:4px"><button class="btn bsm" style="background:var(--warn-lt);color:var(--warn);border:1px solid var(--warn-lt)" onclick="revertirRecepcion('${e.id}')" title="Volver a Pendiente">↩</button><button class="btn bg bsm" onclick="showHistorialEnvio('${e.id}')" title="Historial">📋</button>${!e.isSeed?`<button class="btn bg bsm" onclick="delEnvio('${e.id}')">🗑</button>`:''}${e.isSeed?`<button class="btn bsm" style="background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0;font-size:.65rem" onclick="delSeed('${e.id}')">🗑</button>`:''}</td>`:'<td></td>'}</tr>`;
-  }).join(''):emptyH(isAdmin?11:10);
 }
 
 // ═══════════════════════════════════════════
@@ -2540,7 +2486,15 @@ function renderTV(){
         ${wc?`<span style="background:#d97706;color:#fff;padding:2px 10px;border-radius:99px;font-size:.72rem;font-weight:700">⚠️ ${wc} demorado${wc>1?'s':''}</span>`:''}
         <span style="margin-left:auto;color:rgba(255,255,255,.4);font-size:.75rem">${items.length} pendiente${items.length!==1?'s':''}</span>
       </div>
-      ${items.length ? header+rows : '<div style="padding:24px;text-align:center;color:rgba(255,255,255,.4);font-size:.85rem">✅ Sin pendientes</div>'}
+      ${items.length ? header+rows : `<div style="padding:20px 14px">
+        <div style="color:rgba(255,255,255,.4);font-size:.82rem;margin-bottom:10px">✅ Sin pendientes — últimas recepciones</div>
+        ${(()=>{
+          const hoyAR=nowAR().toLocaleDateString('sv-SE',{timeZone:TZ});
+          const ultimos=envios.filter(e=>e.estado==='recibido'&&e.destino===dep).sort((a,b)=>(b.fechaLlegada||'').localeCompare(a.fechaLlegada||'')).slice(0,3);
+          if(!ultimos.length) return '<div style="color:rgba(255,255,255,.3);font-size:.78rem;padding:8px 0">Sin recepciones registradas</div>';
+          return ultimos.map(e=>`<div style="display:flex;gap:12px;align-items:center;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.05)"><span style="color:#4ade80;font-size:.8rem;white-space:nowrap">${fmtDT(e.fechaLlegada)}</span><span style="color:rgba(255,255,255,.7);font-family:'JetBrains Mono',monospace;font-size:.8rem">${e.remito}</span><span style="color:rgba(255,255,255,.5);font-size:.75rem">${e.origen}</span></div>`).join('');
+        })()}
+      </div>`}
     </div>`;
   }).join('');
 
