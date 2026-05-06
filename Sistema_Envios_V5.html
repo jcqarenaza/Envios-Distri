@@ -3,20 +3,21 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>DistriLogis V4 — Gestión de Envíos</title>
+<title>DistriLogis V5 — Gestión de Envíos</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap"/>
 <style>
 :root{
-  --blue:#1a1f36;--blue-lt:#e8eaf6;--blue-md:#5c6bc0;
+  --blue:#1e3a5f;--blue-lt:#eff6ff;--blue-md:#1e3a5f;
   --accent:#f59e0b;--accent-dk:#d97706;
-  --ok:#16a34a;--ok-lt:#dcfce7;
-  --warn:#d97706;--warn-lt:#fef3c7;
-  --alert:#dc2626;--alert-lt:#fee2e2;
+  --ok:#16a34a;--ok-lt:#f0fdf4;
+  --warn:#d97706;--warn-lt:#fffbeb;
+  --alert:#dc2626;--alert-lt:#fef2f2;
   --purple:#7c3aed;--purple-lt:#ede9fe;
-  --text:#0f172a;--text2:#475569;--text3:#94a3b8;
-  --surface:#ffffff;--surface2:#f4f6fb;--border:#e2e8f0;
-  --radius:12px;--shadow:0 1px 4px rgba(0,0,0,.1),0 1px 2px rgba(0,0,0,.06);
+  --text:#1e293b;--text2:#475569;--text3:#94a3b8;
+  --surface:#ffffff;--surface2:#f8fafc;--border:#e2e8f0;
+  --bg:#f1f5f9;
+  --radius:10px;--shadow:0 1px 3px rgba(0,0,0,.08);
 }
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Plus Jakarta Sans',sans-serif;background:#f0f2f8;color:var(--text);font-size:.875rem;line-height:1.5}
@@ -122,7 +123,7 @@ tr.row-warn{background:rgba(217,119,6,.04)}
 /* ENV SECTIONS */
 .env-section{margin-bottom:18px}
 .env-sec-hd{display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--surface2);border:1px solid var(--border);border-bottom:none;border-radius:var(--radius) var(--radius) 0 0}
-.env-sec-icon{font-size:1rem}
+.env-sec-icon{font-size:1rem;color:#f59e0b}
 .env-sec-title{font-size:.82rem;font-weight:700;color:var(--text)}
 .env-sec-badge{font-size:.7rem;font-weight:700;padding:2px 8px;border-radius:99px}
 .env-sec-badge.ok{background:var(--ok-lt);color:var(--ok)}.env-sec-badge.warn{background:var(--warn-lt);color:var(--warn)}.env-sec-badge.alert{background:var(--alert-lt);color:var(--alert)}
@@ -246,7 +247,7 @@ tr.row-warn{background:rgba(217,119,6,.04)}
   <div class="login-box">
     <div class="login-logo">
       <div class="login-logo-icon">🚚</div>
-      <div class="login-logo-title">DistriLogis V4</div>
+      <div class="login-logo-title">DistriLogis V5</div>
       <div class="login-logo-sub">Sistema de gestión de envíos</div>
     </div>
     <div class="lf">
@@ -275,7 +276,7 @@ tr.row-warn{background:rgba(217,119,6,.04)}
   <!-- SIDEBAR -->
   <div class="sidebar">
     <div class="sidebar-logo">
-      <div class="logo-title">🚚 DistriLogis V4</div>
+      <div class="logo-title">🚚 DistriLogis V5</div>
       <div class="logo-sub">Gestión de envíos</div>
     </div>
     <div class="sidebar-user">
@@ -569,7 +570,7 @@ tr.row-warn{background:rgba(217,119,6,.04)}
 // ═══════════════════════════════════════════
 // CONSTANTES
 // ═══════════════════════════════════════════
-const APP_VERSION = '20260505.1806'; // ← generado automáticamente por Claude al crear el archivo (YYYYMMDD.HHMM)
+const APP_VERSION = '20260506.0816'; // ← generado automáticamente por Claude al crear el archivo (YYYYMMDD.HHMM)
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbwNrWxDXyTFhtRMDkkTZl5_lN1fglUajnTuIlfpZEMknW9FPwXyzMnwcGAANaI53s0j/exec';
 const DEPOTS  = ['Pico','MDP','Bs As','Rosario'];
 const ROUTE_DEFS = [
@@ -980,7 +981,7 @@ async function doLogin(){
 
   // Intentar reconocer usuario con caché local para mostrar app al toque
   if(hasCachedData && localStorage.getItem('dl_last_user') === u){
-    const LOCAL_PASS = { administrador:'tinchohack', pico:'pico', mdp:'mdp', bsas:'bsas', rosario:'rosario', telev:'telev' };
+    const LOCAL_PASS = { administrador:'hack', pico:'pico', mdp:'mdp', bsas:'bsas', rosario:'rosario', telev:'telev' };
     if(LOCAL_PASS[u] === p){
       // Credenciales coinciden con fallback local → mostrar app YA
       currentUser = {
@@ -1097,7 +1098,7 @@ async function doLogin(){
     }
     // Sin conexión total: fallback local
     console.warn('[doLogin] error:', e);
-    const LOCAL_PASS = { administrador:'tinchohack', pico:'pico', mdp:'mdp', bsas:'bsas', rosario:'rosario', telev:'telev' };
+    const LOCAL_PASS = { administrador:'hack', pico:'pico', mdp:'mdp', bsas:'bsas', rosario:'rosario', telev:'telev' };
     const meta = USERS_META[u];
     if(!meta || LOCAL_PASS[u] !== p){
       err.innerHTML = '<span style="font-size:1.1rem">🔒</span> Sin conexión — no se puede verificar identidad';
@@ -2209,7 +2210,7 @@ function buildManualRoutesTable(){
 }
 
 const MANUAL_TABS={
-  general:function(){return `<h2>¿Qué es DistriLogis V4?</h2><p>Sistema de seguimiento de envíos entre depósitos. Registra despachos, hace seguimiento en tiempo real y confirma recepciones, con alertas automáticas según el tiempo en tránsito.</p><h3>Novedades V4</h3><ul><li><strong>🔄 Auto-refresh:</strong> los datos se actualizan automáticamente cada 2 minutos sin necesidad de recargar.</li><li><strong>🔔 Notificaciones:</strong> aparecen avisos en pantalla cuando un envío <strong>cambia</strong> de Normal a Demorado, o de Demorado a Alerta — solo durante la sesión activa.</li><li><strong>📈 Reporte:</strong> resumen por ruta, transporte y tipo con exportación a CSV (solo admin).</li><li><strong>📝 Notas visibles:</strong> las observaciones de envío y recepción se muestran en todas las tablas.</li></ul><h3>Usuarios</h3><table><tr><th>Usuario</th><th>Rol</th><th>Descripción</th></tr><tr><td><code>administrador</code></td><td><span class="badge-ok">Admin</span></td><td>Acceso total. Edita rutas, transportes, revierte recepciones, genera reportes.</td></tr><tr><td><code>pico·mdp·bsas·rosario</code></td><td><span class="badge-blue">Depósito</span></td><td>Ve sus propios envíos. Confirma recepciones de su depósito.</td></tr><tr><td><code>telev</code></td><td><span class="badge-warn">Solo lectura</span></td><td>Vista global sin botones. Ideal para pantalla de monitoreo.</td></tr></table><h3>Alarmas</h3><p>Tiempos en <strong>horas hábiles</strong> (lunes a viernes). Si sale el fin de semana, el cronómetro arranca el <strong>lunes a las 8:00</strong>.</p>${buildManualRoutesTable()}<div class="tip tip-info"><span>💡</span><span>Los tiempos los configura solo el <strong>Administrador</strong> desde Tiempos por Ruta.</span></div>`;},
+  general:function(){return `<h2>¿Qué es DistriLogis V5?</h2><p>Sistema de seguimiento de envíos entre depósitos. Registra despachos, hace seguimiento en tiempo real y confirma recepciones, con alertas automáticas según el tiempo en tránsito.</p><h3>Novedades V5</h3><ul><li><strong>🔄 Auto-refresh:</strong> los datos se actualizan automáticamente cada 2 minutos sin necesidad de recargar.</li><li><strong>🔔 Notificaciones:</strong> aparecen avisos en pantalla cuando un envío <strong>cambia</strong> de Normal a Demorado, o de Demorado a Alerta — solo durante la sesión activa.</li><li><strong>📈 Reporte:</strong> resumen por ruta, transporte y tipo con exportación a CSV (solo admin).</li><li><strong>📝 Notas visibles:</strong> las observaciones de envío y recepción se muestran en todas las tablas.</li></ul><h3>Usuarios</h3><table><tr><th>Usuario</th><th>Rol</th><th>Descripción</th></tr><tr><td><code>administrador</code></td><td><span class="badge-ok">Admin</span></td><td>Acceso total. Edita rutas, transportes, revierte recepciones, genera reportes.</td></tr><tr><td><code>pico·mdp·bsas·rosario</code></td><td><span class="badge-blue">Depósito</span></td><td>Ve sus propios envíos. Confirma recepciones de su depósito.</td></tr><tr><td><code>telev</code></td><td><span class="badge-warn">Solo lectura</span></td><td>Vista global sin botones. Ideal para pantalla de monitoreo.</td></tr></table><h3>Alarmas</h3><p>Tiempos en <strong>horas hábiles</strong> (lunes a viernes). Si sale el fin de semana, el cronómetro arranca el <strong>lunes a las 8:00</strong>.</p>${buildManualRoutesTable()}<div class="tip tip-info"><span>💡</span><span>Los tiempos los configura solo el <strong>Administrador</strong> desde Tiempos por Ruta.</span></div>`;},
   depo:`<h2>Usuario Depósito</h2><p>Usuarios: <code>pico · mdp · bsas · rosario</code></p><h3>Dashboard</h3><p>Muestra envíos con <strong>destino a su depósito</strong>: resumen, alertas, gráfico de torta y tabla de pendientes por urgencia. Los datos se actualizan solos cada 2 minutos.</p><h3>Notificaciones automáticas</h3><p>Aparece un aviso en la esquina superior derecha cuando un envío <strong>cambia</strong> de estado: Normal → Demorado o Demorado → Alerta. No se muestran al entrar — solo cuando ocurre el cambio durante la sesión.</p><h3>Nuevo Envío</h3><p>El <strong>Origen</strong> viene fijo. Todos los campos son obligatorios salvo Observaciones.</p><table><tr><th>Campo</th><th>Notas</th></tr><tr><td>Origen</td><td>Pre-cargado — no editable.</td></tr><tr><td>Destino</td><td>Cualquier otro depósito.</td></tr><tr><td>Fecha y Hora</td><td>Hora real del despacho. No se puede ingresar fecha pasada.</td></tr><tr><td>N° Remito</td><td>Único — no se permiten duplicados.</td></tr><tr><td>Tipo</td><td>Compras, Web o Web + Compras.</td></tr><tr><td>Modalidad</td><td>Cajón, Pallet o Bulto.</td></tr><tr><td>Cantidad</td><td>Por defecto 1.</td></tr><tr><td>Transporte</td><td>Solo los habilitados para el depósito.</td></tr><tr><td>Observaciones</td><td>Opcional — visible en todas las tablas.</td></tr></table><h3>Todos los Envíos</h3><ul><li><strong>📥 Por recibir:</strong> pendientes con destino al depósito, ordenados por urgencia. Muestra las notas del envío.</li><li><strong>🚚 En tránsito:</strong> despachados desde el depósito aún pendientes.</li><li><strong>✅ Historial:</strong> recibidos, con buscador y columnas de notas de envío y recepción.</li></ul><div class="tip tip-info"><span>ℹ️</span><span>Para confirmar llegadas usá la sección <strong>Recepción</strong>.</span></div><h3>Recepción</h3><p>Muestra pendientes con destino al propio depósito. Clic en <strong>✓ Recibir</strong> — la fecha y hora de recepción se captura automáticamente al momento de confirmar. Podés agregar una observación opcional.</p>`,
   admin:`<h2>Administrador</h2><p>Usuario: <code>administrador</code></p><h3>Todos los Envíos</h3><p>Filtros de Origen y Destino. Las tres secciones en orden:</p><ul><li><strong>📥 Por recibir:</strong> botón Recibir + 🗑 eliminar directo en la tabla.</li><li><strong>🚚 En tránsito:</strong> alertas → demorados → normales. Fecha de salida editable inline. Botón 🗑 para eliminar.</li><li><strong>✅ Historial:</strong> botón <strong>↩ Revertir</strong> y <strong>🗑 Eliminar</strong>. Remito editable inline (clic, Enter para guardar). Columnas de notas de envío y recepción.</li></ul><h3>Recepción</h3><p>El admin puede modificar la fecha y hora de recepción (útil para carga retroactiva). Los depósitos tienen la fecha fija al momento de confirmar.</p><h3>Tiempos por Ruta</h3><p>Desplegables editables + <strong>💾 Guardar cambios</strong>. Se sincroniza con Sheets.</p><h3>Transportes</h3><ul><li><strong>➕ Agregar:</strong> escribí el nombre y Agregar.</li><li>Tildá los transportes habilitados por depósito en el grid.</li><li><strong>💾 Guardar</strong> sincroniza con Sheets.</li></ul><h3>📈 Reporte</h3><p>Resumen del período seleccionable (7, 30, 90 días o todo). Muestra:</p><ul><li>Totales: envíos, recibidos, pendientes, alertas activas y promedio de tránsito.</li><li>Tabla por ruta: total, recibidos y tiempo promedio.</li><li>Tabla por transporte: total y recibidos.</li><li>Tabla por tipo: Compras, Web, Web + Compras.</li></ul><p>Botón <strong>⬇ Exportar CSV</strong> descarga todos los envíos del período con todos los campos, listo para abrir en Excel.</p><div class="tip tip-info"><span>💡</span><span>El CSV incluye las horas hábiles de tránsito calculadas para cada envío recibido.</span></div>`,
   tv:`<h2>TV — Solo Lectura</h2><p>Usuario: <code>telev</code></p><div class="tip tip-purple"><span>📺</span><span>Para pantallas de monitoreo permanente — sin riesgo de modificaciones. Los datos se actualizan automáticamente cada 2 minutos.</span></div><h3>Acceso</h3><table><tr><th>Sección</th><th>Acceso</th></tr><tr><td>Dashboard</td><td><span class="badge-ok">✅</span> Con auto-refresh</td></tr><tr><td>Todos los Envíos</td><td><span class="badge-ok">✅</span> Sin botones</td></tr><tr><td>Tiempos por Ruta</td><td><span class="badge-ok">✅</span> Solo lectura</td></tr><tr><td>Nuevo Envío</td><td><span class="badge-alert">🚫</span></td></tr><tr><td>Recepción</td><td><span class="badge-alert">🚫</span></td></tr><tr><td>Transportes</td><td><span class="badge-alert">🚫</span></td></tr><tr><td>Reporte</td><td><span class="badge-alert">🚫</span></td></tr></table>`,
