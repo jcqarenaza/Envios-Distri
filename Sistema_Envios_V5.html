@@ -570,7 +570,7 @@ tr.row-warn{background:rgba(217,119,6,.04)}
 // ═══════════════════════════════════════════
 // CONSTANTES
 // ═══════════════════════════════════════════
-const APP_VERSION = '20260506.0816'; // ← generado automáticamente por Claude al crear el archivo (YYYYMMDD.HHMM)
+const APP_VERSION = '20260512.1537'; // ← generado automáticamente por Claude al crear el archivo (YYYYMMDD.HHMM)
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbwNrWxDXyTFhtRMDkkTZl5_lN1fglUajnTuIlfpZEMknW9FPwXyzMnwcGAANaI53s0j/exec';
 const DEPOTS  = ['Pico','MDP','Bs As','Rosario'];
 const ROUTE_DEFS = [
@@ -1888,27 +1888,44 @@ function _aplicarEdicion(id, nuevoRemito){
     obsRecv:   document.getElementById('me-obsRecv').value.trim(),
   };
 
-  // Aplicar remito
+  // Solo aplicar campos que realmente cambiaron
+  const cambios = [];
+
+  // Remito
   if(campos.remito !== e.remito){
     if(id.startsWith('seed-')){ changes[id]=Object.assign({},changes[id]||{},{remito:campos.remito}); }
     else { const idx=extras.findIndex(x=>x.id===id); if(idx>=0) extras[idx].remito=campos.remito; }
     logCambio(id, 'EDICIÓN', `remito: ${e.remito} → ${campos.remito}`);
-    gasSend('editCampo',{id,campo:'remito',valor:campos.remito});
+    cambios.push({campo:'remito', valor:campos.remito});
   }
 
-  // Aplicar fecha
+  // Fecha
   if(campos.fecha && campos.fecha !== (e.fecha||'').slice(0,16)){
-    editFechaDespacho(id, campos.fecha);
+    if(id.startsWith('seed-')){ changes[id]=Object.assign({},changes[id]||{},{fecha:campos.fecha}); }
+    else { const idx=extras.findIndex(x=>x.id===id); if(idx>=0) extras[idx].fecha=campos.fecha; }
+    cambios.push({campo:'fecha', valor:campos.fecha, esFecha:true});
   }
 
-  // Aplicar resto de campos
+  // Resto de campos — solo si cambiaron
   const camposSimples = ['destino','tipo','modalidad','cantidad','transporte','obs','obsRecv'];
   camposSimples.forEach(campo=>{
-    const val = campos[campo];
+    const val = String(campos[campo]||'');
     const orig = String(e[campo]||'');
-    if(String(val) !== orig){
-      editCampo(id, campo, val);
+    if(val !== orig){
+      if(id.startsWith('seed-')){ changes[id]=Object.assign({},changes[id]||{},{[campo]:campos[campo]}); }
+      else { const idx=extras.findIndex(x=>x.id===id); if(idx>=0) extras[idx][campo]=campos[campo]; }
+      cambios.push({campo, valor:campos[campo]});
     }
+  });
+
+  // Enviar al GAS solo los campos que cambiaron
+  cambios.forEach(c=>{
+    if(c.esFecha){
+      gasSend('editFechaDespacho',{id, fecha:c.valor});
+    } else {
+      gasSend('editCampo',{id, campo:c.campo, valor:c.valor});
+    }
+    logCambio(id, 'EDICIÓN', `${c.campo}: ${c.valor}`);
   });
 
   saveState(); rebuildEnvios();
