@@ -460,18 +460,21 @@ tr.row-warn{background:rgba(217,119,6,.04)}
       </div>
       <div class="rpt-period">
         <label style="font-size:.78rem;font-weight:600;color:var(--text2)">Período:</label>
-        <select id="rpt-periodo" onchange="renderReporte()">
-          <option value="7">Últimos 7 días</option>
-          <option value="30" selected>Últimos 30 días</option>
-          <option value="90">Últimos 90 días</option>
-          <option value="0">Todo</option>
+        <select id="rpt-periodo" onchange="onPeriodoChange()">
+          <option value="semana">Esta semana (desde lunes)</option>
+          <option value="mes" selected>Este mes</option>
+          <option value="mes-anterior">Mes anterior</option>
+          <option value="mes-sel">Seleccionar mes →</option>
+          <option value="total">Total histórico</option>
         </select>
+        <input type="month" id="rpt-mes-sel" style="display:none" onchange="renderReporte()"/>
         <label style="font-size:.78rem;font-weight:600;color:var(--text2)">Estado:</label>
         <select id="rpt-estado" onchange="renderReporte()">
           <option value="">Todos</option>
           <option value="recibido">Recibidos</option>
           <option value="pendiente">Pendientes</option>
         </select>
+        <span id="rpt-periodo-label" style="font-size:.75rem;color:var(--text3);font-style:italic"></span>
       </div>
       <div id="rpt-stats" class="stat-grid" style="margin-bottom:20px"></div>
       <div class="rpt-grid" id="rpt-grid"></div>
@@ -570,7 +573,7 @@ tr.row-warn{background:rgba(217,119,6,.04)}
 // ═══════════════════════════════════════════
 // CONSTANTES
 // ═══════════════════════════════════════════
-const APP_VERSION = '20260512.1537'; // ← generado automáticamente por Claude al crear el archivo (YYYYMMDD.HHMM)
+const APP_VERSION = '20260514.1811'; // ← generado automáticamente por Claude al crear el archivo (YYYYMMDD.HHMM)
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbwNrWxDXyTFhtRMDkkTZl5_lN1fglUajnTuIlfpZEMknW9FPwXyzMnwcGAANaI53s0j/exec';
 const DEPOTS  = ['Pico','MDP','Bs As','Rosario'];
 const ROUTE_DEFS = [
@@ -2069,32 +2072,117 @@ function saveTransportesView(){
 // ═══════════════════════════════════════════
 // REPORTE
 // ═══════════════════════════════════════════
-function renderReporte(){
-  const dias   = parseInt(document.getElementById('rpt-periodo').value);
-  const estado = document.getElementById('rpt-estado').value;
-  const now    = nowAR();
-  const desde  = dias>0 ? new Date(now - dias*24*3600*1000) : null;
+// ── Helpers de período ────────────────────────────────────────────────────
+function onPeriodoChange(){
+  const val = document.getElementById('rpt-periodo').value;
+  const selEl = document.getElementById('rpt-mes-sel');
+  if(val === 'mes-sel'){
+    selEl.style.display = '';
+    // Default al mes actual
+    if(!selEl.value){
+      const now = nowAR();
+      selEl.value = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+    }
+  } else {
+    selEl.style.display = 'none';
+  }
+  renderReporte();
+}
 
-  let base = [...envios];
-  if(estado) base = base.filter(e=>e.estado===estado);
-  if(desde)  base = base.filter(e=>new Date(e.fecha)>=desde);
+function getRangoPeriodo(val, mesSelVal){
+  const now = nowAR();
+  let desde, hasta, label, prevDesde, prevHasta;
+
+  if(val === 'semana'){
+    // Desde el lunes de esta semana
+    const dow = now.getDay() || 7; // 1=lun..7=dom
+    desde = new Date(now); desde.setHours(0,0,0,0); desde.setDate(now.getDate()-(dow-1));
+    hasta = new Date(now);
+    const lunesPrev = new Date(desde); lunesPrev.setDate(lunesPrev.getDate()-7);
+    prevDesde = lunesPrev;
+    prevHasta = new Date(desde); prevHasta.setMilliseconds(-1);
+    label = `Lunes ${desde.toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',timeZone:TZ})} al hoy`;
+
+  } else if(val === 'mes'){
+    desde = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
+    hasta = new Date(now);
+    prevDesde = new Date(now.getFullYear(), now.getMonth()-1, 1, 0, 0, 0);
+    prevHasta = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
+    label = `${desde.toLocaleDateString('es-AR',{month:'long',year:'numeric',timeZone:TZ})}`;
+
+  } else if(val === 'mes-anterior'){
+    const y = now.getMonth()===0 ? now.getFullYear()-1 : now.getFullYear();
+    const m = now.getMonth()===0 ? 11 : now.getMonth()-1;
+    desde = new Date(y, m, 1, 0, 0, 0);
+    hasta = new Date(y, m+1, 0, 23, 59, 59);
+    prevDesde = new Date(y, m-1, 1, 0, 0, 0);
+    prevHasta = new Date(y, m, 0, 23, 59, 59);
+    label = `${desde.toLocaleDateString('es-AR',{month:'long',year:'numeric',timeZone:TZ})}`;
+
+  } else if(val === 'mes-sel' && mesSelVal){
+    const [y,m] = mesSelVal.split('-').map(Number);
+    desde = new Date(y, m-1, 1, 0, 0, 0);
+    hasta = new Date(y, m, 0, 23, 59, 59);
+    prevDesde = new Date(y, m-2, 1, 0, 0, 0);
+    prevHasta = new Date(y, m-1, 0, 23, 59, 59);
+    label = `${desde.toLocaleDateString('es-AR',{month:'long',year:'numeric',timeZone:TZ})}`;
+
+  } else { // total
+    desde = null; hasta = null; prevDesde = null; prevHasta = null;
+    label = 'Histórico completo';
+  }
+  return { desde, hasta, prevDesde, prevHasta, label };
+}
+
+function flecha(actual, prev){
+  if(prev===null||prev===undefined||prev===0) return '';
+  if(actual > prev) return `<span style="color:var(--ok);font-size:.7rem;font-weight:700"> ▲${actual-prev}</span>`;
+  if(actual < prev) return `<span style="color:var(--alert);font-size:.7rem;font-weight:700"> ▼${prev-actual}</span>`;
+  return `<span style="color:var(--text3);font-size:.7rem"> —</span>`;
+}
+
+function renderReporte(){
+  const val    = document.getElementById('rpt-periodo').value;
+  const mesSel = document.getElementById('rpt-mes-sel').value;
+  const estado = document.getElementById('rpt-estado').value;
+  const { desde, hasta, prevDesde, prevHasta, label } = getRangoPeriodo(val, mesSel);
+
+  const labelEl = document.getElementById('rpt-periodo-label');
+  if(labelEl) labelEl.textContent = label;
+
+  const filtrar = (d, h) => {
+    let b = [...envios];
+    if(estado) b = b.filter(e=>e.estado===estado);
+    if(d) b = b.filter(e=>new Date(e.fecha)>=d);
+    if(h) b = b.filter(e=>new Date(e.fecha)<=h);
+    return b;
+  };
+
+  const base = filtrar(desde, hasta);
+  const prev = (prevDesde||prevHasta) ? filtrar(prevDesde, prevHasta) : null;
 
   // Stats generales
-  const total    = base.length;
-  const recibidos= base.filter(e=>e.estado==='recibido').length;
+  const total     = base.length;
+  const recibidos = base.filter(e=>e.estado==='recibido').length;
   const pendientes= base.filter(e=>e.estado==='pendiente').length;
-  const alertas  = base.filter(e=>e.estado==='pendiente'&&calcStatusCached(e).status==='alert').length;
-
-  // Tiempo promedio de tránsito
+  const alertas   = base.filter(e=>e.estado==='pendiente'&&calcStatusCached(e).status==='alert').length;
   const conTiempo = base.filter(e=>e.estado==='recibido'&&e.fechaLlegada);
   const avgHrs    = conTiempo.length ? conTiempo.reduce((a,e)=>a+weekdayHours(effectiveStart(e.fecha),new Date(e.fechaLlegada)),0)/conTiempo.length : null;
 
+  const pTotal     = prev?.length ?? null;
+  const pRecibidos = prev?.filter(e=>e.estado==='recibido').length ?? null;
+  const pPend      = prev?.filter(e=>e.estado==='pendiente').length ?? null;
+  const pConTiempo = prev?.filter(e=>e.estado==='recibido'&&e.fechaLlegada) ?? [];
+  const pAvgHrs    = pConTiempo.length ? pConTiempo.reduce((a,e)=>a+weekdayHours(effectiveStart(e.fecha),new Date(e.fechaLlegada)),0)/pConTiempo.length : null;
+
+  const cmpLabel = prev ? `<div style="font-size:.65rem;color:var(--text3);margin-top:2px">vs mes ant.</div>` : '';
+
   document.getElementById('rpt-stats').innerHTML=`
-    <div class="stat blue"><div class="sl">Total</div><div class="sv">${total}</div><div class="sd">envíos en el período</div></div>
-    <div class="stat ok"><div class="sl">Recibidos</div><div class="sv">${recibidos}</div><div class="sd">completados</div></div>
-    <div class="stat blue"><div class="sl">Pendientes</div><div class="sv">${pendientes}</div><div class="sd">en tránsito</div></div>
+    <div class="stat blue"><div class="sl">Total</div><div class="sv">${total}${flecha(total,pTotal)}</div><div class="sd">envíos en el período</div>${cmpLabel}</div>
+    <div class="stat ok"><div class="sl">Recibidos</div><div class="sv">${recibidos}${flecha(recibidos,pRecibidos)}</div><div class="sd">completados</div>${cmpLabel}</div>
+    <div class="stat blue"><div class="sl">Pendientes</div><div class="sv">${pendientes}${flecha(pendientes,pPend)}</div><div class="sd">en tránsito</div>${cmpLabel}</div>
     <div class="stat alert"><div class="sl">🚨 Alertas</div><div class="sv">${alertas}</div><div class="sd">activas</div></div>
-    <div class="stat warn"><div class="sl">Prom. tránsito</div><div class="sv">${avgHrs!=null?fmtH(avgHrs):'—'}</div><div class="sd">horas hábiles</div></div>`;
+    <div class="stat warn"><div class="sl">Prom. tránsito</div><div class="sv" style="font-size:1.3rem">${avgHrs!=null?fmtH(avgHrs):'—'}${avgHrs!=null&&pAvgHrs!=null?flecha(Math.round(pAvgHrs),Math.round(avgHrs)):''}</div><div class="sd">horas hábiles</div>${cmpLabel}</div>`;
 
   // Por ruta
   const porRuta = {};
@@ -2177,14 +2265,15 @@ function renderReporte(){
 }
 
 function exportarCSV(){
-  const dias   = parseInt(document.getElementById('rpt-periodo').value);
+  const val    = document.getElementById('rpt-periodo').value;
+  const mesSel = document.getElementById('rpt-mes-sel').value;
   const estado = document.getElementById('rpt-estado').value;
-  const now    = nowAR();
-  const desde  = dias>0 ? new Date(now - dias*24*3600*1000) : null;
+  const { desde, hasta } = getRangoPeriodo(val, mesSel);
 
   let base = [...envios];
   if(estado) base = base.filter(e=>e.estado===estado);
   if(desde)  base = base.filter(e=>new Date(e.fecha)>=desde);
+  if(hasta)  base = base.filter(e=>new Date(e.fecha)<=hasta);
 
   const header = ['ID','Origen','Destino','Fecha Salida','Remito','Tipo','Modalidad','Cantidad','Transporte','Observaciones','Estado','Fecha Llegada','Obs Recepcion','Horas Transito'];
   const rows = base.map(e=>{
