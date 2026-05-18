@@ -574,7 +574,7 @@ tr.row-warn{background:rgba(217,119,6,.04)}
 // ═══════════════════════════════════════════
 // CONSTANTES
 // ═══════════════════════════════════════════
-const APP_VERSION = '20260518.1548'; // ← generado automáticamente por Claude al crear el archivo (YYYYMMDD.HHMM)
+const APP_VERSION = '20260518.1555'; // ← generado automáticamente por Claude al crear el archivo (YYYYMMDD.HHMM)
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbwNrWxDXyTFhtRMDkkTZl5_lN1fglUajnTuIlfpZEMknW9FPwXyzMnwcGAANaI53s0j/exec';
 const DEPOTS  = ['Pico','MDP','Bs As','Rosario'];
 const ROUTE_DEFS = [
@@ -2163,24 +2163,32 @@ function renderReporte(){
 
   const filtrar = (d, h) => {
     let b = [...envios];
-    if(estado) b = b.filter(e=>e.estado===estado);
-    if(d || h) b = b.filter(e=>{
-      // Para recibidos: filtrar por fechaLlegada (cuándo llegó)
-      // Para pendientes: filtrar por fecha (cuándo salió)
-      // Sin filtro de estado: incluir ambos criterios
-      if(e.estado==='recibido'){
+    // Pendientes: TODOS los que están en tránsito ahora, sin importar cuándo salieron
+    // Recibidos: filtrar por fechaLlegada (cuándo llegó al destino)
+    if(estado === 'pendiente'){
+      b = b.filter(e=>e.estado==='pendiente');
+    } else if(estado === 'recibido'){
+      b = b.filter(e=>e.estado==='recibido');
+      if(d || h) b = b.filter(e=>{
         const fl = e.fechaLlegada ? new Date(e.fechaLlegada) : null;
         if(!fl) return false;
         if(d && fl < d) return false;
         if(h && fl > h) return false;
         return true;
-      } else {
-        const fs = new Date(e.fecha);
-        if(d && fs < d) return false;
-        if(h && fs > h) return false;
+      });
+    } else {
+      // Sin filtro de estado: recibidos filtrados por llegada + todos los pendientes
+      const recibidos = b.filter(e=>e.estado==='recibido').filter(e=>{
+        if(!d && !h) return true;
+        const fl = e.fechaLlegada ? new Date(e.fechaLlegada) : null;
+        if(!fl) return false;
+        if(d && fl < d) return false;
+        if(h && fl > h) return false;
         return true;
-      }
-    });
+      });
+      const pendientes = b.filter(e=>e.estado==='pendiente');
+      b = [...recibidos, ...pendientes];
+    }
     return b;
   };
 
@@ -2316,17 +2324,36 @@ function renderReporte(){
 
   const rutaRows = rutasSorted.map(r=>{
     const avgStr = r.avg!==null ? fmtH(r.avg) : '—';
-    const avgColor = r.avg!==null ? (r.avg<48?'var(--ok)':r.avg<72?'var(--warn)':'var(--alert)') : 'var(--text3)';
     const isMejor = mejorRuta&&r.label===mejorRuta.label;
     const isPeor  = peorRuta&&r.label===peorRuta.label;
-    const badge = isMejor?'<span style="background:#dcfce7;color:#16a34a;padding:1px 6px;border-radius:99px;font-size:.65rem;font-weight:700;margin-left:4px">✓ mejor</span>'
-                :isPeor ?'<span style="background:#fee2e2;color:#dc2626;padding:1px 6px;border-radius:99px;font-size:.65rem;font-weight:700;margin-left:4px">↓ lenta</span>':'';
+    const badge = isMejor?'<span style="background:#dcfce7;color:#16a34a;padding:1px 6px;border-radius:99px;font-size:.65rem;font-weight:700;margin-left:4px">✓ más rápida</span>'
+                :isPeor ?'<span style="background:#fee2e2;color:#dc2626;padding:1px 6px;border-radius:99px;font-size:.65rem;font-weight:700;margin-left:4px">↓ más lenta</span>':'';
+
+    // Obtener umbral normal y alerta para esa ruta
+    let avgColor = 'var(--text3)', diffStr = '';
+    if(r.avg !== null){
+      // Extraer origen/destino del label "X → Y"
+      const partes = r.label.split(' → ');
+      const [nL, aL] = partes.length===2 ? thresh(partes[0].trim(), partes[1].trim()) : [48,72];
+      const diff = r.avg - nL;
+      if(r.avg >= aL){
+        avgColor = 'var(--alert)';
+        diffStr = `<span style="font-size:.68rem;color:var(--alert);font-weight:600"> +${fmtH(Math.abs(diff))} vs límite</span>`;
+      } else if(r.avg >= nL){
+        avgColor = 'var(--warn)';
+        diffStr = `<span style="font-size:.68rem;color:var(--warn);font-weight:600"> +${fmtH(Math.abs(diff))} vs límite</span>`;
+      } else {
+        avgColor = 'var(--ok)';
+        diffStr = `<span style="font-size:.68rem;color:var(--ok);font-weight:600"> -${fmtH(Math.abs(diff))} bajo límite</span>`;
+      }
+    }
+
     return `<tr>
       <td style="font-weight:600">${r.label}${badge}</td>
       <td style="text-align:center">${r.total}</td>
       <td style="text-align:center">${r.recibidos}</td>
       <td style="text-align:center;font-weight:600;color:var(--text3)">${r.pct}%</td>
-      <td style="text-align:center;font-weight:700;color:${avgColor}">${avgStr}</td>
+      <td style="text-align:center;font-weight:700;color:${avgColor}">${avgStr}${diffStr}</td>
     </tr>`;
   }).join('');
 
