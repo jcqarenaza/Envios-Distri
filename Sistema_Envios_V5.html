@@ -574,7 +574,7 @@ tr.row-warn{background:rgba(217,119,6,.04)}
 // ═══════════════════════════════════════════
 // CONSTANTES
 // ═══════════════════════════════════════════
-const APP_VERSION = '20260518.1604'; // ← generado automáticamente por Claude al crear el archivo (YYYYMMDD.HHMM)
+const APP_VERSION = '20260518.1609'; // ← generado automáticamente por Claude al crear el archivo (YYYYMMDD.HHMM)
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbwNrWxDXyTFhtRMDkkTZl5_lN1fglUajnTuIlfpZEMknW9FPwXyzMnwcGAANaI53s0j/exec';
 const DEPOTS  = ['Pico','MDP','Bs As','Rosario'];
 const ROUTE_DEFS = [
@@ -2163,9 +2163,13 @@ function renderReporte(){
 
   const filtrar = (d, h) => {
     let b = [...envios];
+    // Para "esta semana": h = ahora → todos los pendientes actuales (fecha <= ahora)
+    // Para "semana pasada": h = domingo pasado → pendientes que existían ese domingo
+    // Para "total": h = null → todos
+    const hFin = h || new Date(8640000000000000); // fecha máxima si no hay hasta
+
     if(estado === 'pendiente'){
-      // Pendientes: TODOS los actuales, sin importar cuándo salieron
-      b = b.filter(e=>e.estado==='pendiente');
+      b = b.filter(e=>e.estado==='pendiente' && new Date(e.fecha)<=hFin);
     } else if(estado === 'recibido'){
       b = b.filter(e=>e.estado==='recibido');
       if(d || h) b = b.filter(e=>{
@@ -2176,7 +2180,8 @@ function renderReporte(){
         return true;
       });
     } else {
-      // Sin filtro de estado: recibidos por fechaLlegada + TODOS los pendientes actuales
+      // Recibidos → por fechaLlegada en el período
+      // Pendientes → todos los que existían al fin del período (fecha <= hFin)
       const recibidos = b.filter(e=>e.estado==='recibido').filter(e=>{
         if(!d && !h) return true;
         const fl = e.fechaLlegada ? new Date(e.fechaLlegada) : null;
@@ -2185,8 +2190,7 @@ function renderReporte(){
         if(h && fl > h) return false;
         return true;
       });
-      // Pendientes: TODOS sin filtro de fecha
-      const pendientes = b.filter(e=>e.estado==='pendiente');
+      const pendientes = b.filter(e=>e.estado==='pendiente' && new Date(e.fecha)<=hFin);
       b = [...recibidos, ...pendientes];
     }
     return b;
@@ -2196,15 +2200,11 @@ function renderReporte(){
   const prev = (prevDesde||prevHasta) ? filtrar(prevDesde, prevHasta) : null;
 
   // Stats generales
-  // "Total" y "Recibidos" = solo los del período seleccionado
-  // "Pendientes" = TODOS los actuales (independiente del período)
-  const todosPendientes = envios.filter(e=>e.estado==='pendiente');
-  const recibidosPeriodo = base.filter(e=>e.estado==='recibido');
-  const total     = recibidosPeriodo.length + todosPendientes.length;
-  const recibidos = recibidosPeriodo.length;
-  const pendientes= todosPendientes.length;
-  const alertas   = todosPendientes.filter(e=>calcStatusCached(e).status==='alert').length;
-  const conTiempo = recibidosPeriodo.filter(e=>e.fechaLlegada);
+  const total     = base.length;
+  const recibidos = base.filter(e=>e.estado==='recibido').length;
+  const pendientes= base.filter(e=>e.estado==='pendiente').length;
+  const alertas   = base.filter(e=>e.estado==='pendiente'&&calcStatusCached(e).status==='alert').length;
+  const conTiempo = base.filter(e=>e.estado==='recibido'&&e.fechaLlegada);
   const avgHrs    = conTiempo.length ? conTiempo.reduce((a,e)=>a+weekdayHours(effectiveStart(e.fecha),new Date(e.fechaLlegada)),0)/conTiempo.length : null;
 
   const pTotal     = prev?.length ?? null;
