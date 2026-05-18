@@ -476,6 +476,8 @@ tr.row-warn{background:rgba(217,119,6,.04)}
           <option value="pendiente">Pendientes</option>
         </select>
         <span id="rpt-periodo-label" style="font-size:.75rem;color:var(--text3);font-style:italic"></span>
+        <label style="font-size:.78rem;font-weight:600;color:var(--text2)">Transporte:</label>
+        <select id="rpt-transporte" onchange="renderReporte()" style="padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:.8rem;font-family:inherit;outline:none;background:var(--surface)"><option value="">Todos</option></select>
       </div>
       <div id="rpt-stats" class="stat-grid" style="margin-bottom:20px"></div>
       <div class="rpt-grid" id="rpt-grid"></div>
@@ -574,7 +576,7 @@ tr.row-warn{background:rgba(217,119,6,.04)}
 // ═══════════════════════════════════════════
 // CONSTANTES
 // ═══════════════════════════════════════════
-const APP_VERSION = '20260518.1609'; // ← generado automáticamente por Claude al crear el archivo (YYYYMMDD.HHMM)
+const APP_VERSION = '20260518.1632'; // ← generado automáticamente por Claude al crear el archivo (YYYYMMDD.HHMM)
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbwNrWxDXyTFhtRMDkkTZl5_lN1fglUajnTuIlfpZEMknW9FPwXyzMnwcGAANaI53s0j/exec';
 const DEPOTS  = ['Pico','MDP','Bs As','Rosario'];
 const ROUTE_DEFS = [
@@ -2291,15 +2293,35 @@ function renderReporte(){
     porTipo[t]++;
   });
 
-  // Datos de ruta con avg calculado
-  const rutaData = Object.values(porRuta).map(r=>{
+  // Poblar selector de transporte con opciones únicas
+  const traSelector = document.getElementById('rpt-transporte');
+  const traFiltro = traSelector ? traSelector.value : '';
+  if(traSelector){
+    const traOpts = [...new Set(base.map(e=>e.transporte||'Sin asignar').filter(Boolean))].sort();
+    const curVal = traSelector.value;
+    traSelector.innerHTML = '<option value="">Todos</option>' + traOpts.map(t=>`<option value="${t}"${t===curVal?' selected':''}>${t}</option>`).join('');
+  }
+
+  // Datos de ruta con avg calculado — filtrados por transporte si se seleccionó
+  const baseRuta = traFiltro ? base.filter(e=>(e.transporte||'Sin asignar')===traFiltro) : base;
+  const porRutaFilt = {};
+  baseRuta.forEach(e=>{
+    const key = e.origen+' → '+e.destino;
+    if(!porRutaFilt[key]) porRutaFilt[key]={label:key,total:0,recibidos:0,hrs:[]};
+    porRutaFilt[key].total++;
+    if(e.estado==='recibido'){
+      porRutaFilt[key].recibidos++;
+      if(e.fechaLlegada) porRutaFilt[key].hrs.push(weekdayHours(effectiveStart(e.fecha),new Date(e.fechaLlegada)));
+    }
+  });
+  const rutaData = Object.values(porRutaFilt).map(r=>{
     const avg = r.hrs.length ? r.hrs.reduce((a,b)=>a+b,0)/r.hrs.length : null;
     const pct = r.total>0 ? Math.round(r.recibidos/r.total*100) : 0;
     return {...r, avg, pct};
   });
 
   // Ordenar rutas — estado guardado en window para persistir entre renders
-  window._rutaSort = window._rutaSort || {col:'total', dir:-1};
+  window._rutaSort = window._rutaSort || {col:'avg', dir:1};
   const RS = window._rutaSort;
   const sortRutas = (col)=>{
     if(RS.col===col) RS.dir*=-1; else { RS.col=col; RS.dir=col==='label'?1:-1; }
