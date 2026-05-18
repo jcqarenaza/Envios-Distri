@@ -462,6 +462,7 @@ tr.row-warn{background:rgba(217,119,6,.04)}
         <label style="font-size:.78rem;font-weight:600;color:var(--text2)">Período:</label>
         <select id="rpt-periodo" onchange="onPeriodoChange()">
           <option value="semana">Esta semana (desde lunes)</option>
+          <option value="semana-ant">Semana pasada</option>
           <option value="mes" selected>Este mes</option>
           <option value="mes-anterior">Mes anterior</option>
           <option value="mes-sel">Seleccionar mes →</option>
@@ -573,7 +574,7 @@ tr.row-warn{background:rgba(217,119,6,.04)}
 // ═══════════════════════════════════════════
 // CONSTANTES
 // ═══════════════════════════════════════════
-const APP_VERSION = '20260518.1126'; // ← generado automáticamente por Claude al crear el archivo (YYYYMMDD.HHMM)
+const APP_VERSION = '20260518.1548'; // ← generado automáticamente por Claude al crear el archivo (YYYYMMDD.HHMM)
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbwNrWxDXyTFhtRMDkkTZl5_lN1fglUajnTuIlfpZEMknW9FPwXyzMnwcGAANaI53s0j/exec';
 const DEPOTS  = ['Pico','MDP','Bs As','Rosario'];
 const ROUTE_DEFS = [
@@ -2103,6 +2104,16 @@ function getRangoPeriodo(val, mesSelVal){
     prevHasta = new Date(desde); prevHasta.setMilliseconds(-1);
     label = `Lunes ${desde.toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',timeZone:TZ})} al hoy`;
 
+  } else if(val === 'semana-ant'){
+    // Semana pasada — lunes a domingo
+    const dow2 = now.getDay() || 7;
+    const lunes = new Date(now); lunes.setHours(0,0,0,0); lunes.setDate(now.getDate()-(dow2-1));
+    desde = new Date(lunes); desde.setDate(desde.getDate()-7);
+    hasta = new Date(lunes); hasta.setMilliseconds(-1);
+    prevDesde = new Date(desde); prevDesde.setDate(prevDesde.getDate()-7);
+    prevHasta = new Date(desde); prevHasta.setMilliseconds(-1);
+    label = `Semana del ${desde.toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',timeZone:TZ})} al ${hasta.toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',timeZone:TZ})}`;
+
   } else if(val === 'mes'){
     desde = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
     hasta = new Date(now);
@@ -2153,8 +2164,23 @@ function renderReporte(){
   const filtrar = (d, h) => {
     let b = [...envios];
     if(estado) b = b.filter(e=>e.estado===estado);
-    if(d) b = b.filter(e=>new Date(e.fecha)>=d);
-    if(h) b = b.filter(e=>new Date(e.fecha)<=h);
+    if(d || h) b = b.filter(e=>{
+      // Para recibidos: filtrar por fechaLlegada (cuándo llegó)
+      // Para pendientes: filtrar por fecha (cuándo salió)
+      // Sin filtro de estado: incluir ambos criterios
+      if(e.estado==='recibido'){
+        const fl = e.fechaLlegada ? new Date(e.fechaLlegada) : null;
+        if(!fl) return false;
+        if(d && fl < d) return false;
+        if(h && fl > h) return false;
+        return true;
+      } else {
+        const fs = new Date(e.fecha);
+        if(d && fs < d) return false;
+        if(h && fs > h) return false;
+        return true;
+      }
+    });
     return b;
   };
 
@@ -2182,7 +2208,7 @@ function renderReporte(){
     <div class="stat ok"><div class="sl">Recibidos</div><div class="sv">${recibidos}${flecha(recibidos,pRecibidos)}</div><div class="sd">completados</div>${cmpLabel}</div>
     <div class="stat blue"><div class="sl">Pendientes</div><div class="sv">${pendientes}${flecha(pendientes,pPend)}</div><div class="sd">en tránsito</div>${cmpLabel}</div>
     <div class="stat alert"><div class="sl">🚨 Alertas</div><div class="sv">${alertas}</div><div class="sd">activas</div></div>
-    <div class="stat warn"><div class="sl">Prom. tránsito</div><div class="sv" style="font-size:1.3rem">${avgHrs!=null?fmtH(avgHrs):'—'}${avgHrs!=null&&pAvgHrs!=null?flecha(Math.round(pAvgHrs),Math.round(avgHrs)):''}</div><div class="sd">horas hábiles</div>${cmpLabel}</div>`;
+    <div class="stat warn"><div class="sl">Prom. tránsito</div><div class="sv" style="font-size:1.3rem">${avgHrs!=null?fmtH(avgHrs):'—'}${avgHrs!=null&&pAvgHrs!=null?flecha(Math.round(pAvgHrs),Math.round(avgHrs)):''}</div><div class="sd">horas hábiles — sin fines de semana</div>${cmpLabel}</div>`;
 
   // Por ruta
   const porRuta = {};
@@ -2253,10 +2279,58 @@ function renderReporte(){
     porTipo[t]++;
   });
 
-  const rutaRows = Object.values(porRuta).sort((a,b)=>b.total-a.total).map(r=>{
-    const avg = r.hrs.length ? fmtH(r.hrs.reduce((a,b)=>a+b,0)/r.hrs.length) : '—';
-    return `<tr><td style="font-weight:600">${r.label}</td><td style="text-align:center">${r.total}</td><td style="text-align:center">${r.recibidos}</td><td style="text-align:center">${avg}</td></tr>`;
+  // Datos de ruta con avg calculado
+  const rutaData = Object.values(porRuta).map(r=>{
+    const avg = r.hrs.length ? r.hrs.reduce((a,b)=>a+b,0)/r.hrs.length : null;
+    const pct = r.total>0 ? Math.round(r.recibidos/r.total*100) : 0;
+    return {...r, avg, pct};
+  });
+
+  // Ordenar rutas — estado guardado en window para persistir entre renders
+  window._rutaSort = window._rutaSort || {col:'total', dir:-1};
+  const RS = window._rutaSort;
+  const sortRutas = (col)=>{
+    if(RS.col===col) RS.dir*=-1; else { RS.col=col; RS.dir=col==='label'?1:-1; }
+    renderReporte();
+  };
+  const rutasSorted = [...rutaData].sort((a,b)=>{
+    if(RS.col==='label') return RS.dir*(a.label.localeCompare(b.label));
+    if(RS.col==='avg'){
+      if(a.avg===null&&b.avg===null) return 0;
+      if(a.avg===null) return 1; if(b.avg===null) return -1;
+      return RS.dir*(a.avg-b.avg);
+    }
+    return RS.dir*((b[RS.col]||0)-(a[RS.col]||0));
+  });
+
+  // Mejor y peor ruta (por avg, solo las que tienen datos)
+  const rutasConAvg = rutasSorted.filter(r=>r.avg!==null&&r.recibidos>=3);
+  const mejorRuta  = rutasConAvg.length ? [...rutasConAvg].sort((a,b)=>a.avg-b.avg)[0] : null;
+  const peorRuta   = rutasConAvg.length ? [...rutasConAvg].sort((a,b)=>b.avg-a.avg)[0] : null;
+
+  const thStyle = (col)=>{
+    const active = RS.col===col;
+    const arrow = active ? (RS.dir===1?'▲':'▼') : '⇅';
+    return `style="cursor:pointer;user-select:none;white-space:nowrap${active?';color:#f59e0b':''}" onclick="sortRutas('${col}')"`;
+  };
+
+  const rutaRows = rutasSorted.map(r=>{
+    const avgStr = r.avg!==null ? fmtH(r.avg) : '—';
+    const avgColor = r.avg!==null ? (r.avg<48?'var(--ok)':r.avg<72?'var(--warn)':'var(--alert)') : 'var(--text3)';
+    const isMejor = mejorRuta&&r.label===mejorRuta.label;
+    const isPeor  = peorRuta&&r.label===peorRuta.label;
+    const badge = isMejor?'<span style="background:#dcfce7;color:#16a34a;padding:1px 6px;border-radius:99px;font-size:.65rem;font-weight:700;margin-left:4px">✓ mejor</span>'
+                :isPeor ?'<span style="background:#fee2e2;color:#dc2626;padding:1px 6px;border-radius:99px;font-size:.65rem;font-weight:700;margin-left:4px">↓ lenta</span>':'';
+    return `<tr>
+      <td style="font-weight:600">${r.label}${badge}</td>
+      <td style="text-align:center">${r.total}</td>
+      <td style="text-align:center">${r.recibidos}</td>
+      <td style="text-align:center;font-weight:600;color:var(--text3)">${r.pct}%</td>
+      <td style="text-align:center;font-weight:700;color:${avgColor}">${avgStr}</td>
+    </tr>`;
   }).join('');
+
+  const rutaArrow = (col)=>RS.col===col?(RS.dir===1?'▲':'▼'):'⇅';
 
   // Métricas por transporte
   const traData = Object.entries(porTra).sort((a,b)=>b[1].total-a[1].total);
@@ -2295,16 +2369,28 @@ function renderReporte(){
   const traColspan = 8 + semanas.length;
   document.getElementById('rpt-grid').innerHTML=`
     <div class="rpt-card">
-      <div class="rpt-card-head">📍 Por ruta</div>
-      <table class="rpt-table"><thead><tr><th>Ruta</th><th>Total</th><th>Recibidos</th><th>Prom.</th></tr></thead><tbody>${rutaRows||'<tr><td colspan="4" style="text-align:center;color:var(--text3);padding:14px">Sin datos</td></tr>'}</tbody></table>
+      <div class="rpt-card-head" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px">
+        <span>📍 Por ruta</span>
+        ${mejorRuta?`<span style="font-size:.7rem;color:var(--text3)">✓ <strong style="color:var(--ok)">${mejorRuta.label}</strong> ${fmtH(mejorRuta.avg)} · ↓ lenta: <strong style="color:var(--alert)">${peorRuta.label}</strong> ${fmtH(peorRuta.avg)}</span>`:''}
+      </div>
+      <div style="overflow-x:auto"><table class="rpt-table">
+        <thead><tr>
+          <th ${thStyle('label')}>Ruta ${rutaArrow('label')}</th>
+          <th ${thStyle('total')} style="text-align:center">Total ${rutaArrow('total')}</th>
+          <th ${thStyle('recibidos')} style="text-align:center">Recibidos ${rutaArrow('recibidos')}</th>
+          <th ${thStyle('pct')} style="text-align:center">% ${rutaArrow('pct')}</th>
+          <th ${thStyle('avg')} style="text-align:center">Prom. hábil ${rutaArrow('avg')}</th>
+        </tr></thead>
+        <tbody>${rutaRows||'<tr><td colspan="5" style="text-align:center;color:var(--text3);padding:14px">Sin datos</td></tr>'}</tbody>
+      </table></div>
     </div>
     <div style="display:flex;flex-direction:column;gap:14px">
       <div class="rpt-card" style="overflow-x:auto">
         <div class="rpt-card-head">🚛 Por transporte — performance</div>
         <table class="rpt-table"><thead><tr>
           <th>Transporte</th><th>Total</th><th>Recibidos</th><th title="En tránsito actualmente">Pendientes</th><th>% completado</th>
-          <th title="Promedio solo de los recibidos">Prom. recibidos</th>
-          <th title="Promedio incluyendo pendientes actuales" style="color:var(--text3)">Prom. total</th>
+          <th title="Promedio de tránsito de los recibidos (horas hábiles)">Prom. recibidos</th>
+          <th title="Promedio incluyendo pendientes en tránsito (horas hábiles)" style="color:var(--text3)">Prom. total</th>
           ${semHeaders}
           <th style="min-width:80px"></th>
         </tr></thead><tbody>${traRows||`<tr><td colspan="${traColspan}" style="text-align:center;color:var(--text3);padding:14px">Sin datos</td></tr>`}</tbody></table>
