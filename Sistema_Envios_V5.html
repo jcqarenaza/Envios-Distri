@@ -573,7 +573,7 @@ tr.row-warn{background:rgba(217,119,6,.04)}
 // ═══════════════════════════════════════════
 // CONSTANTES
 // ═══════════════════════════════════════════
-const APP_VERSION = '20260514.1811'; // ← generado automáticamente por Claude al crear el archivo (YYYYMMDD.HHMM)
+const APP_VERSION = '20260518.1126'; // ← generado automáticamente por Claude al crear el archivo (YYYYMMDD.HHMM)
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbwNrWxDXyTFhtRMDkkTZl5_lN1fglUajnTuIlfpZEMknW9FPwXyzMnwcGAANaI53s0j/exec';
 const DEPOTS  = ['Pico','MDP','Bs As','Rosario'];
 const ROUTE_DEFS = [
@@ -2196,17 +2196,53 @@ function renderReporte(){
     }
   });
 
-  // Por transporte — con métricas de performance
+  // ── Semanas del período (para columnas semanales) ────────────────────────
+  // Detectar si el período es mensual para mostrar desglose semanal
+  const periodoVal = document.getElementById('rpt-periodo').value;
+  const esMensual  = ['mes','mes-anterior','mes-sel'].includes(periodoVal);
+
+  // Calcular semanas dentro del período
+  let semanas = [];
+  if(esMensual && desde){
+    let semIni = new Date(desde);
+    // Ajustar al lunes de la semana del inicio del mes
+    const dow = semIni.getDay()||7;
+    if(dow>1) semIni.setDate(semIni.getDate()-(dow-1));
+    let s = 1;
+    while(semIni <= (hasta||nowAR())){
+      const semFin = new Date(semIni); semFin.setDate(semFin.getDate()+6); semFin.setHours(23,59,59);
+      semanas.push({ label:`S${s}`, ini: new Date(semIni), fin: new Date(semFin) });
+      semIni.setDate(semIni.getDate()+7);
+      s++;
+    }
+  }
+
+  // ── Por transporte — con métricas completas y desglose semanal ───────────
   const porTra = {};
   base.forEach(e=>{
     const t=e.transporte||'Sin asignar';
-    if(!porTra[t]) porTra[t]={total:0,recibidos:0,alertas:0,hrs:[]};
+    if(!porTra[t]) porTra[t]={total:0,recibidos:0,pendientes:0,alertas:0,hrsRecv:[],hrsPend:[],semanas:{}};
     porTra[t].total++;
+
+    // Acumular por semana
+    if(esMensual){
+      const fechaE = new Date(e.fecha);
+      semanas.forEach((sem,i)=>{
+        if(fechaE>=sem.ini && fechaE<=sem.fin){
+          porTra[t].semanas[i] = (porTra[t].semanas[i]||0)+1;
+        }
+      });
+    }
+
     if(e.estado==='recibido'){
       porTra[t].recibidos++;
-      if(e.fechaLlegada) porTra[t].hrs.push(weekdayHours(effectiveStart(e.fecha),new Date(e.fechaLlegada)));
+      if(e.fechaLlegada) porTra[t].hrsRecv.push(weekdayHours(effectiveStart(e.fecha),new Date(e.fechaLlegada)));
     }
-    if(e.estado==='pendiente'&&calcStatusCached(e).status==='alert') porTra[t].alertas++;
+    if(e.estado==='pendiente'){
+      porTra[t].pendientes++;
+      porTra[t].hrsPend.push(calcStatusCached(e).hrs);
+      if(calcStatusCached(e).status==='alert') porTra[t].alertas++;
+    }
   });
 
   // Por tipo
@@ -2222,19 +2258,28 @@ function renderReporte(){
     return `<tr><td style="font-weight:600">${r.label}</td><td style="text-align:center">${r.total}</td><td style="text-align:center">${r.recibidos}</td><td style="text-align:center">${avg}</td></tr>`;
   }).join('');
 
-  // Métricas por transporte con promedio y tasa de puntualidad
+  // Métricas por transporte
   const traData = Object.entries(porTra).sort((a,b)=>b[1].total-a[1].total);
+  const semHeaders = esMensual ? semanas.map(s=>`<th style="text-align:center;min-width:40px">${s.label}</th>`).join('') : '';
+
   const traRows = traData.map(([t,v])=>{
-    const avgH = v.hrs.length ? v.hrs.reduce((a,b)=>a+b,0)/v.hrs.length : null;
-    const pct = v.recibidos>0 ? Math.round(v.recibidos/v.total*100) : 0;
+    // Promedio incluyendo pendientes con sus horas actuales
+    const todasHrs = [...v.hrsRecv, ...v.hrsPend];
+    const avgH = todasHrs.length ? todasHrs.reduce((a,b)=>a+b,0)/todasHrs.length : null;
+    const avgRecvH = v.hrsRecv.length ? v.hrsRecv.reduce((a,b)=>a+b,0)/v.hrsRecv.length : null;
+    const pct = v.total>0 ? Math.round(v.recibidos/v.total*100) : 0;
     const pctColor = pct>=90?'var(--ok)':pct>=70?'var(--warn)':'var(--alert)';
     const alertaBadge = v.alertas>0?`<span style="background:var(--alert-lt);color:var(--alert);padding:1px 6px;border-radius:99px;font-size:.68rem;font-weight:700">🚨 ${v.alertas}</span>`:'';
+    const semCells = esMensual ? semanas.map((_,i)=>`<td style="text-align:center;color:var(--text2);font-size:.78rem">${v.semanas[i]||'—'}</td>`).join('') : '';
     return `<tr>
       <td style="font-weight:600">${t} ${alertaBadge}</td>
       <td style="text-align:center">${v.total}</td>
       <td style="text-align:center">${v.recibidos}</td>
+      <td style="text-align:center;color:var(--warn);font-weight:600">${v.pendientes>0?v.pendientes:'—'}</td>
       <td style="text-align:center;font-weight:700;color:${pctColor}">${pct}%</td>
-      <td style="text-align:center">${avgH!=null?fmtH(avgH):'—'}</td>
+      <td style="text-align:center">${avgRecvH!=null?fmtH(avgRecvH):'—'}</td>
+      <td style="text-align:center;font-size:.75rem;color:var(--text3)">${avgH!=null?fmtH(avgH):'—'}</td>
+      ${semCells}
       <td style="padding:8px 12px">
         <div style="background:var(--border);border-radius:99px;height:6px;overflow:hidden;min-width:60px">
           <div style="height:100%;border-radius:99px;background:${pctColor};width:${pct}%"></div>
@@ -2247,15 +2292,22 @@ function renderReporte(){
     `<tr><td style="font-weight:600">${t}</td><td style="text-align:center">${v}</td></tr>`
   ).join('');
 
+  const traColspan = 8 + semanas.length;
   document.getElementById('rpt-grid').innerHTML=`
     <div class="rpt-card">
       <div class="rpt-card-head">📍 Por ruta</div>
       <table class="rpt-table"><thead><tr><th>Ruta</th><th>Total</th><th>Recibidos</th><th>Prom.</th></tr></thead><tbody>${rutaRows||'<tr><td colspan="4" style="text-align:center;color:var(--text3);padding:14px">Sin datos</td></tr>'}</tbody></table>
     </div>
     <div style="display:flex;flex-direction:column;gap:14px">
-      <div class="rpt-card">
+      <div class="rpt-card" style="overflow-x:auto">
         <div class="rpt-card-head">🚛 Por transporte — performance</div>
-        <table class="rpt-table"><thead><tr><th>Transporte</th><th>Total</th><th>Recibidos</th><th>% completado</th><th>Prom. tránsito</th><th style="min-width:80px"></th></tr></thead><tbody>${traRows||'<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:14px">Sin datos</td></tr>'}</tbody></table>
+        <table class="rpt-table"><thead><tr>
+          <th>Transporte</th><th>Total</th><th>Recibidos</th><th title="En tránsito actualmente">Pendientes</th><th>% completado</th>
+          <th title="Promedio solo de los recibidos">Prom. recibidos</th>
+          <th title="Promedio incluyendo pendientes actuales" style="color:var(--text3)">Prom. total</th>
+          ${semHeaders}
+          <th style="min-width:80px"></th>
+        </tr></thead><tbody>${traRows||`<tr><td colspan="${traColspan}" style="text-align:center;color:var(--text3);padding:14px">Sin datos</td></tr>`}</tbody></table>
       </div>
       <div class="rpt-card">
         <div class="rpt-card-head">📋 Por tipo</div>
