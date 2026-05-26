@@ -576,7 +576,7 @@ tr.row-warn{background:rgba(217,119,6,.04)}
 // ═══════════════════════════════════════════
 // CONSTANTES
 // ═══════════════════════════════════════════
-const APP_VERSION = '20260518.1632'; // ← generado automáticamente por Claude al crear el archivo (YYYYMMDD.HHMM)
+const APP_VERSION = '20260523.0847'; // ← generado automáticamente por Claude al crear el archivo (YYYYMMDD.HHMM)
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbwNrWxDXyTFhtRMDkkTZl5_lN1fglUajnTuIlfpZEMknW9FPwXyzMnwcGAANaI53s0j/exec';
 const DEPOTS  = ['Pico','MDP','Bs As','Rosario'];
 const ROUTE_DEFS = [
@@ -798,17 +798,21 @@ async function autoRefresh(){
   }
 }
 
+// Listeners de visibilidad — se registran UNA sola vez al inicio
+let _visListenerSet = false;
 function startAutoRefresh(){
   if(_refreshTimer) clearInterval(_refreshTimer);
   _refreshTimer = setInterval(autoRefresh, 20 * 1000); // cada 20 segundos
 
-  // Refresh inmediato al volver a la pestaña o ventana
-  document.addEventListener('visibilitychange', ()=>{
-    if(!document.hidden && currentUser) autoRefresh();
-  });
-  window.addEventListener('focus', ()=>{
-    if(currentUser) autoRefresh();
-  });
+  if(!_visListenerSet){
+    _visListenerSet = true;
+    document.addEventListener('visibilitychange', ()=>{
+      if(!document.hidden && currentUser) autoRefresh();
+    });
+    window.addEventListener('focus', ()=>{
+      if(currentUser) autoRefresh();
+    });
+  }
 }
 function stopAutoRefresh(){
   if(_refreshTimer){ clearInterval(_refreshTimer); _refreshTimer=null; }
@@ -1936,6 +1940,8 @@ function _aplicarEdicion(id, nuevoRemito){
 
   saveState(); rebuildEnvios();
   document.getElementById('mo-edit').classList.remove('open');
+  // También cerrar el modal de confirmación si quedó abierto (ej. remito similar)
+  document.getElementById('mo-confirm').classList.remove('open');
   toast('✅ Envío actualizado');
   logCambio(id, 'EDICIÓN', 'Modal de edición completa');
   renderEnvios();
@@ -2700,13 +2706,15 @@ function estimarLlegada(envio){
 
 function fmtEstimado(envio){
   const est = estimarLlegada(envio);
-  if(!est) return '<span style="color:var(--text3);font-size:.72rem">Sin datos</span>';
+  // Requiere al menos 3 muestras para ser confiable
+  if(!est || est.n < 3) return '<span style="color:var(--text3);font-size:.72rem">—</span>';
   const now = nowAR();
   const diff = est.estimado - now;
   const diffH = diff/3600000;
-  if(diffH < 0) return `<span style="color:var(--alert);font-size:.72rem">Retrasado ~${fmtH(Math.abs(diffH))}</span>`;
-  if(diffH < 4) return `<span style="color:var(--warn);font-size:.72rem">Hoy ~${fmtH(diffH)}</span>`;
-  return `<span style="font-size:.72rem;color:var(--text2)">${fmtDT(est.estimado.toISOString())} <span style="color:var(--text3)">(${est.n}e)</span></span>`;
+  const nLabel = `<span style="color:var(--text3);font-size:.65rem"> (${est.n}e)</span>`;
+  if(diffH < 0) return `<span style="color:var(--alert);font-size:.72rem">Retrasado ~${fmtH(Math.abs(diffH))}${nLabel}</span>`;
+  if(diffH < 4) return `<span style="color:var(--warn);font-size:.72rem">Hoy ~${fmtH(diffH)}${nLabel}</span>`;
+  return `<span style="font-size:.72rem;color:var(--text2)">${fmtDT(est.estimado.toISOString())}${nLabel}</span>`;
 }
 
 // ═══════════════════════════════════════════
@@ -2802,22 +2810,31 @@ function renderTV(){
 // NAVEGACIÓN DIRECTA A ENVÍO
 // ═══════════════════════════════════════════
 function irAEnvio(id){
-  // Navegar a la sección "Todos los envíos"
   show('envios');
-  // Esperar que se renderice y luego resaltar la fila
   setTimeout(()=>{
-    const row = document.querySelector(`tr[data-envio-id="${id}"]`);
-    if(!row) return;
-    row.scrollIntoView({behavior:'smooth', block:'center'});
-    row.style.transition = 'background .15s';
-    row.style.background = 'var(--blue-lt)';
-    row.style.outline = '2px solid var(--blue-md)';
-    row.style.borderRadius = '6px';
-    setTimeout(()=>{
-      row.style.background = '';
-      row.style.outline = '';
-    }, 2500);
-  }, 120);
+    let row = document.querySelector(`tr[data-envio-id="${id}"]`);
+    // Si no se encuentra, puede estar en el historial colapsado — abrirlo
+    if(!row){
+      const histBody = document.getElementById('hist-body');
+      if(histBody && histBody.style.display==='none'){
+        toggleHistorial();
+        setTimeout(()=>_resaltarFila(id), 120);
+        return;
+      }
+    }
+    _resaltarFila(id);
+  }, 150);
+}
+
+function _resaltarFila(id){
+  const row = document.querySelector(`tr[data-envio-id="${id}"]`);
+  if(!row) return;
+  row.scrollIntoView({behavior:'smooth', block:'center'});
+  row.style.transition = 'background .3s';
+  row.style.background = 'var(--blue-lt)';
+  row.style.outline = '2px solid var(--blue-md)';
+  row.style.borderRadius = '4px';
+  setTimeout(()=>{ row.style.background=''; row.style.outline=''; }, 2500);
 }
 
 // ═══════════════════════════════════════════
