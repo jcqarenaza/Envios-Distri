@@ -580,7 +580,7 @@ tr.row-warn{background:rgba(217,119,6,.04)}
 // ═══════════════════════════════════════════
 // CONSTANTES
 // ═══════════════════════════════════════════
-const APP_VERSION = '20260827.0829'; // ← generado automáticamente por Claude al crear el archivo (YYYYMMDD.HHMM)
+const APP_VERSION = '20260831.0842'; // ← generado automáticamente por Claude al crear el archivo (YYYYMMDD.HHMM)
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbwNrWxDXyTFhtRMDkkTZl5_lN1fglUajnTuIlfpZEMknW9FPwXyzMnwcGAANaI53s0j/exec';
 const DEPOTS  = ['Pico','MDP','Bs As','Rosario'];
 const ROUTE_DEFS = [
@@ -1634,6 +1634,7 @@ function limpiar(){
 }
 
 function altaEnvio(){
+  const isAdmin=currentUser.role==='admin';
   const ori=document.getElementById('f-ori');
   const origen=ori.disabled?currentUser.depot:ori.value;
   const destino=document.getElementById('f-dst').value;
@@ -1646,7 +1647,6 @@ function altaEnvio(){
   const mod=document.getElementById('f-mod').value;
   const cant=document.getElementById('f-cant').value;
   const tra=document.getElementById('f-tra').value;
-  const isAdmin=currentUser.role==='admin';
 
   // ── Validaciones básicas ────────────────────────────────────────
   if(!origen||!destino||!fecha){ toast('⚠ Completá origen, destino y fecha'); return; }
