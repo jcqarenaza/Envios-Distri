@@ -580,7 +580,7 @@ tr.row-warn{background:rgba(217,119,6,.04)}
 // ═══════════════════════════════════════════
 // CONSTANTES
 // ═══════════════════════════════════════════
-const APP_VERSION = '20260910.1657'; // ← generado automáticamente por Claude al crear el archivo (YYYYMMDD.HHMM)
+const APP_VERSION = '20260910.1724'; // ← generado automáticamente por Claude al crear el archivo (YYYYMMDD.HHMM)
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbwNrWxDXyTFhtRMDkkTZl5_lN1fglUajnTuIlfpZEMknW9FPwXyzMnwcGAANaI53s0j/exec';
 const DEPOTS  = ['Pico','MDP','Bs As','Rosario'];
 const ROUTE_DEFS = [
@@ -2001,7 +2001,7 @@ function delSeed(id){
 // ═══════════════════════════════════════════
 function renderRoutes(){
   const isAdmin=currentUser.role==='admin';
-  const opts=(sel)=>[24,36,48,60,72,84,96,120].map(h=>`<option value="${h}"${h===sel?' selected':''}>${h}h</option>`).join('');
+  const opts=(sel)=>[24,36,48,60,72,84,96,120,144,168].map(h=>`<option value="${h}"${h===sel?' selected':''}>${h}h</option>`).join('');
   document.getElementById('th-guardar-rutas').innerHTML=isAdmin?`<button class="btn bs bsm" onclick="saveRoutes()">💾 Guardar cambios</button>`:'';
   document.getElementById('tb-rutas').innerHTML=ROUTE_DEFS.map(def=>{
     const [nL,aL]=routeThresholds[def.key]||[48,72];
