@@ -580,7 +580,7 @@ tr.row-warn{background:rgba(217,119,6,.04)}
 // ═══════════════════════════════════════════
 // CONSTANTES
 // ═══════════════════════════════════════════
-const APP_VERSION = '20260831.0842'; // ← generado automáticamente por Claude al crear el archivo (YYYYMMDD.HHMM)
+const APP_VERSION = '20260910.1657'; // ← generado automáticamente por Claude al crear el archivo (YYYYMMDD.HHMM)
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbwNrWxDXyTFhtRMDkkTZl5_lN1fglUajnTuIlfpZEMknW9FPwXyzMnwcGAANaI53s0j/exec';
 const DEPOTS  = ['Pico','MDP','Bs As','Rosario'];
 const ROUTE_DEFS = [
@@ -1015,7 +1015,7 @@ async function doLogin(){
           currentUser.depot = d.user.depo || null;
           currentUser.label = d.user.label || u;
           if(d.envios?.length > 0){ extras=d.envios; changes={}; saveState(); rebuildEnvios(); }
-          if(d.rutas){ const hasNew=ROUTE_DEFS.some(r=>d.rutas[r.key]); if(hasNew){ routeThresholds=d.rutas; localStorage.setItem('dl_routes',JSON.stringify(routeThresholds)); } }
+          if(d.rutas && Object.keys(d.rutas).length){ routeThresholds=d.rutas; localStorage.setItem('dl_routes',JSON.stringify(routeThresholds)); }
           if(d.transportes){
             if(d.transportes.lista){ ALL_TRANSPORTES.length=0; d.transportes.lista.forEach(t=>ALL_TRANSPORTES.push(t)); localStorage.setItem('dl_tra_list',JSON.stringify(ALL_TRANSPORTES)); }
             if(d.transportes.depots){ Object.assign(depoTransportes,d.transportes.depots); localStorage.setItem('dl_transportes',JSON.stringify(depoTransportes)); }
@@ -1066,8 +1066,7 @@ async function doLogin(){
       saveState();
     }
     if(d.rutas){
-      const hasNew = ROUTE_DEFS.some(r=>d.rutas[r.key]);
-      if(hasNew){ routeThresholds = d.rutas; localStorage.setItem('dl_routes', JSON.stringify(routeThresholds)); }
+      if(Object.keys(d.rutas).length){ routeThresholds = d.rutas; localStorage.setItem('dl_routes', JSON.stringify(routeThresholds)); }
     }
     if(d.transportes){
       if(d.transportes.lista)  { ALL_TRANSPORTES.length=0; d.transportes.lista.forEach(t=>ALL_TRANSPORTES.push(t)); localStorage.setItem('dl_tra_list',JSON.stringify(ALL_TRANSPORTES)); }
@@ -1099,7 +1098,7 @@ async function doLogin(){
           gasGet('getEnvios'), gasGet('getRutas'), gasGet('getTransportes')
         ]);
         if(enviosRes.ok && enviosRes.data?.length > 0){ extras=enviosRes.data; changes={}; saveState(); }
-        if(rutasRes.ok && rutasRes.data){ const hasNew=ROUTE_DEFS.some(d=>rutasRes.data[d.key]); if(hasNew){ routeThresholds=rutasRes.data; localStorage.setItem('dl_routes',JSON.stringify(routeThresholds)); } }
+        if(rutasRes.ok && rutasRes.data && Object.keys(rutasRes.data).length){ routeThresholds=rutasRes.data; localStorage.setItem('dl_routes',JSON.stringify(routeThresholds)); }
         if(traRes.ok && traRes.data){
           if(traRes.data.lista){ ALL_TRANSPORTES.length=0; traRes.data.lista.forEach(t=>ALL_TRANSPORTES.push(t)); localStorage.setItem('dl_tra_list',JSON.stringify(ALL_TRANSPORTES)); }
           if(traRes.data.depots){ Object.assign(depoTransportes,traRes.data.depots); localStorage.setItem('dl_transportes',JSON.stringify(depoTransportes)); }
