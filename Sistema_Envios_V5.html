@@ -37,6 +37,7 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f0f2f8;color:var(--t
 .nav-item{display:flex;align-items:center;gap:9px;padding:9px 16px;color:#2d3a50;font-size:.76rem;font-weight:500;cursor:pointer;transition:all .15s;border-left:3px solid transparent;text-decoration:none}
 .nav-item:hover{background:#eef4ff;color:#1a3c78}
 .nav-item.active{background:#eef4ff;color:#1a3c78;border-left-color:#1a3c78;font-weight:700}
+.badge-sistema{display:inline-flex;align-items:center;gap:3px;background:#f0fdf4;border:1px solid #86efac;color:#166534;font-size:.63rem;font-weight:700;padding:1px 6px;border-radius:10px;white-space:nowrap}
 .nav-badge{margin-left:auto;background:var(--alert);color:#fff;font-size:.63rem;font-weight:700;padding:2px 6px;border-radius:99px;min-width:18px;text-align:center}
 .sidebar-footer{padding:10px;border-top:1px solid #d0d9ec}
 #sync-badge{display:none;margin:0 0 6px;border-radius:6px;overflow:hidden;border:1px solid rgba(220,38,38,.25)}
@@ -580,7 +581,7 @@ tr.row-warn{background:rgba(217,119,6,.04)}
 // ═══════════════════════════════════════════
 // CONSTANTES
 // ═══════════════════════════════════════════
-const APP_VERSION = '20260917.1721'; // ← generado automáticamente por Claude al crear el archivo (YYYYMMDD.HHMM)
+const APP_VERSION = '20260917.1731'; // ← generado automáticamente por Claude al crear el archivo (YYYYMMDD.HHMM)
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbwAhNnv4KL8J36WQ8wzqXWtXqFhTTJFuweFY2oMtdJVmNoZ_AI3DFGt5MQU8ioH7UYF/exec';
 const DEPOTS  = ['Pico','MDP','Bs As','Rosario'];
 const ROUTE_DEFS = [
@@ -1466,7 +1467,9 @@ function renderEnvios(){
   recvBadge.textContent=recvCount?`${recvCount} envío${recvCount>1?'s':''}`:' Sin pendientes';
   recvBadge.className='env-sec-badge '+(recvA?'alert':recvW?'warn':recvCount?'ok':'');
   document.getElementById('th-acciones3').style.display=isAdmin?'':'none';
-  const remitoCell=(e)=>isAdmin?`<td class="mono" style="color:var(--blue-md);font-weight:600;padding:4px 10px"><input class="remito-edit" value="${e.remito}" data-orig="${e.remito}" onblur="editRemito('${e.id}',this)" onkeydown="if(event.key==='Enter')this.blur();if(event.key==='Escape'){this.value=this.dataset.orig;this.blur()}" title="Enter/Esc"/></td>`:`<td class="mono" style="color:var(--blue-md);font-weight:600">${e.remito}</td>`;
+  const esSistema=(e)=>e.creadoPor==='sistema-remitos';
+  const badgeSistema=`<span class="badge-sistema" title="Cargado automáticamente por el sistema de remitos">🤖 Auto</span>`;
+  const remitoCell=(e)=>isAdmin?`<td class="mono" style="color:var(--blue-md);font-weight:600;padding:4px 10px">${esSistema(e)?badgeSistema+' ':''}<input class="remito-edit" value="${e.remito}" data-orig="${e.remito}" onblur="editRemito('${e.id}',this)" onkeydown="if(event.key==='Enter')this.blur();if(event.key==='Escape'){this.value=this.dataset.orig;this.blur()}" title="Enter/Esc"/></td>`:`<td class="mono" style="color:var(--blue-md);font-weight:600">${esSistema(e)?badgeSistema+' ':''}<span>${e.remito}</span></td>`;
 
   // (edición via modal ✏️ — ver openEdicion())
 
