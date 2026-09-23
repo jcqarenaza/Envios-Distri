@@ -581,7 +581,7 @@ tr.row-warn{background:rgba(217,119,6,.04)}
 // ═══════════════════════════════════════════
 // CONSTANTES
 // ═══════════════════════════════════════════
-const APP_VERSION = '20260923.1155'; // ← generado automáticamente por Claude al crear el archivo (YYYYMMDD.HHMM)
+const APP_VERSION = '20260923.1206'; // ← generado automáticamente por Claude al crear el archivo (YYYYMMDD.HHMM)
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbwAhNnv4KL8J36WQ8wzqXWtXqFhTTJFuweFY2oMtdJVmNoZ_AI3DFGt5MQU8ioH7UYF/exec';
 const DEPOTS  = ['Pico','MDP','Bs As','Rosario'];
 const ROUTE_DEFS = [
@@ -918,7 +918,17 @@ function loadState(){
     } else { routeThresholds = buildDefaultThresholds(); }
   } catch(e){ routeThresholds = buildDefaultThresholds(); }
   try { const tl = JSON.parse(localStorage.getItem('dl_tra_list')||'null'); if(tl&&tl.length){ ALL_TRANSPORTES.length=0; tl.forEach(t=>ALL_TRANSPORTES.push(t)); } } catch(e){}
-  try { const dt = JSON.parse(localStorage.getItem('dl_transportes')||'null'); if(dt) Object.assign(depoTransportes, dt); } catch(e){}
+  try { const dt = JSON.parse(localStorage.getItem('dl_transportes')||'null'); if(dt){
+    const firstVal=Object.values(dt)[0];
+    if(firstVal && Array.isArray(firstVal)){
+      // Migrar estructura vieja {dep:[lista]} → nueva {ori:{dst:[lista]}}
+      const deps=['Pico','MDP','Bs As','Rosario'];
+      const migrated={};
+      deps.forEach(ori=>{ migrated[ori]={}; deps.filter(d=>d!==ori).forEach(dst=>{ migrated[ori][dst]=dt[ori]||[]; }); });
+      Object.assign(depoTransportes,migrated);
+      localStorage.setItem('dl_transportes',JSON.stringify(depoTransportes));
+    } else { Object.assign(depoTransportes,dt); }
+  }} catch(e){}
 }
 
 function buildDefaultThresholds(){
@@ -1019,7 +1029,9 @@ async function doLogin(){
           if(d.rutas && Object.keys(d.rutas).length){ routeThresholds=d.rutas; localStorage.setItem('dl_routes',JSON.stringify(routeThresholds)); }
           if(d.transportes){
             if(d.transportes.lista){ ALL_TRANSPORTES.length=0; d.transportes.lista.forEach(t=>ALL_TRANSPORTES.push(t)); localStorage.setItem('dl_tra_list',JSON.stringify(ALL_TRANSPORTES)); }
-            if(d.transportes.depots){ Object.assign(depoTransportes,d.transportes.depots); localStorage.setItem('dl_transportes',JSON.stringify(depoTransportes)); }
+            if(d.transportes.depots){ const _dt=d.transportes.depots; const _fv=Object.values(_dt)[0];
+              if(_fv&&Array.isArray(_fv)){ const _deps=['Pico','MDP','Bs As','Rosario']; const _m={}; _deps.forEach(o=>{ _m[o]={}; _deps.filter(d2=>d2!==o).forEach(ds=>{ _m[o][ds]=_dt[o]||[]; }); }); Object.assign(depoTransportes,_m); }
+              else { Object.assign(depoTransportes,_dt); } localStorage.setItem('dl_transportes',JSON.stringify(depoTransportes)); }
           }
           // Re-renderizar vista activa con datos frescos
           const av=document.querySelector('.view.active');
@@ -1622,6 +1634,7 @@ function updateTransporteSelect(){
   sel.disabled=false;
   if(!traList.length){ sel.innerHTML='<option value="">— Sin transportes configurados —</option>'; return; }
   sel.innerHTML='<option value="">— Seleccioná —</option>'+traList.map(t=>`<option>${t}</option>`).join('');
+  if(traList.length===1) sel.value=traList[0];
 }
 
 function limpiar(){
