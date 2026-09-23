@@ -581,7 +581,7 @@ tr.row-warn{background:rgba(217,119,6,.04)}
 // ═══════════════════════════════════════════
 // CONSTANTES
 // ═══════════════════════════════════════════
-const APP_VERSION = '20260923.1209'; // ← generado automáticamente por Claude al crear el archivo (YYYYMMDD.HHMM)
+const APP_VERSION = '20260923.1212'; // ← generado automáticamente por Claude al crear el archivo (YYYYMMDD.HHMM)
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbwAhNnv4KL8J36WQ8wzqXWtXqFhTTJFuweFY2oMtdJVmNoZ_AI3DFGt5MQU8ioH7UYF/exec';
 const DEPOTS  = ['Pico','MDP','Bs As','Rosario'];
 const ROUTE_DEFS = [
@@ -1632,9 +1632,21 @@ function updateTransporteSelect(){
   const rutas=depoTransportes[oriVal]||{};
   const traList=rutas[dstVal]||[];
   sel.disabled=false;
-  if(!traList.length){ sel.innerHTML='<option value="">— Sin transportes configurados —</option>'; return; }
+  if(!traList.length){ sel.innerHTML='<option value="">— Sin transportes configurados —</option>'; sel.style.display=''; return; }
+  if(traList.length===1){
+    sel.style.display='none';
+    let fixed=document.getElementById('f-tra-fixed');
+    if(!fixed){ fixed=document.createElement('div'); fixed.id='f-tra-fixed'; fixed.style.cssText='padding:9px 11px;border:1px solid #d0d9ec;border-radius:6px;font-size:.88rem;background:#f8fafd;color:#1a2233;font-weight:600'; sel.parentNode.insertBefore(fixed,sel.nextSibling); }
+    fixed.style.display='';
+    fixed.textContent=traList[0];
+    sel.innerHTML=`<option value="${traList[0]}">${traList[0]}</option>`;
+    setTimeout(()=>{ sel.value=traList[0]; },0);
+    return;
+  }
+  // Más de uno — mostrar select normal, ocultar fixed si existe
+  sel.style.display='';
+  const fixed=document.getElementById('f-tra-fixed'); if(fixed) fixed.style.display='none';
   sel.innerHTML='<option value="">— Seleccioná —</option>'+traList.map(t=>`<option value="${t}">${t}</option>`).join('');
-  if(traList.length===1) setTimeout(()=>{ sel.value=traList[0]; }, 0);
 }
 
 function limpiar(){
