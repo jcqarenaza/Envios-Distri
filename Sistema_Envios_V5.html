@@ -325,7 +325,7 @@ tr.row-warn{background:rgba(217,119,6,.04)}
             </select>
           </div>
           <div class="fgr"><label>Destino <span class="req">*</span></label>
-            <select id="f-dst"><option value="">— Seleccioná —</option></select>
+            <select id="f-dst" onchange="updateTransporteSelect()"><option value="">— Seleccioná —</option></select>
           </div>
           <div class="fgr"><label>Fecha y Hora de Salida <span class="req">*</span></label>
             <input type="datetime-local" id="f-fecha"/>
@@ -581,7 +581,7 @@ tr.row-warn{background:rgba(217,119,6,.04)}
 // ═══════════════════════════════════════════
 // CONSTANTES
 // ═══════════════════════════════════════════
-const APP_VERSION = '20260917.1731'; // ← generado automáticamente por Claude al crear el archivo (YYYYMMDD.HHMM)
+const APP_VERSION = '20260923.1155'; // ← generado automáticamente por Claude al crear el archivo (YYYYMMDD.HHMM)
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbwAhNnv4KL8J36WQ8wzqXWtXqFhTTJFuweFY2oMtdJVmNoZ_AI3DFGt5MQU8ioH7UYF/exec';
 const DEPOTS  = ['Pico','MDP','Bs As','Rosario'];
 const ROUTE_DEFS = [
@@ -904,7 +904,7 @@ let changes = {};
 let envios  = [];
 let routeThresholds = {};
 let ALL_TRANSPORTES = ['Brinatti','Cruz del Sur','Transban','Vía 2'];
-let depoTransportes = { Pico:['Brinatti','Cruz del Sur'], MDP:['Cruz del Sur','Vía 2'], 'Bs As':['Brinatti','Transban','Vía 2'], Rosario:['Brinatti','Transban'] };
+let depoTransportes = { Pico:{'MDP':['Brinatti'],'Bs As':['Brinatti'],'Rosario':['Brinatti']}, MDP:{'Pico':['Brinatti'],'Bs As':['Cruz del Sur'],'Rosario':['Cruz del Sur']}, 'Bs As':{'Pico':['Brinatti'],'MDP':['Cruz del Sur'],'Rosario':['Transban']}, Rosario:{'Pico':['Brinatti'],'MDP':['Cruz del Sur'],'Bs As':['Transban']} };
 
 function loadState(){
   const u = localStorage.getItem('dl_last_user') || '_';
@@ -1611,10 +1611,16 @@ function updateDestOptions(){
 
 function updateTransporteSelect(){
   const ori=document.getElementById('f-ori');
+  const dst=document.getElementById('f-dst');
   const oriVal=ori.disabled?currentUser.depot:ori.value;
-  const traList=oriVal?(depoTransportes[oriVal]||[]):[];
+  const dstVal=dst?dst.value:'';
   const sel=document.getElementById('f-tra');
-  if(!oriVal){ sel.innerHTML='<option value="">— Seleccioná origen primero —</option>'; return; }
+  if(!oriVal){ sel.innerHTML='<option value="">— Seleccioná origen primero —</option>'; sel.disabled=true; return; }
+  if(!dstVal){ sel.innerHTML='<option value="">— Seleccioná destino primero —</option>'; sel.disabled=true; return; }
+  const rutas=depoTransportes[oriVal]||{};
+  const traList=rutas[dstVal]||[];
+  sel.disabled=false;
+  if(!traList.length){ sel.innerHTML='<option value="">— Sin transportes configurados —</option>'; return; }
   sel.innerHTML='<option value="">— Seleccioná —</option>'+traList.map(t=>`<option>${t}</option>`).join('');
 }
 
@@ -2031,7 +2037,13 @@ function saveRoutes(){
 // ═══════════════════════════════════════════
 let traTemp={};
 function renderTransportesView(){
-  traTemp=JSON.parse(JSON.stringify(depoTransportes));
+  // Migrar estructura vieja {dep:[lista]} → nueva {ori:{dst:[lista]}} si hace falta
+  const raw=JSON.parse(JSON.stringify(depoTransportes));
+  if(Array.isArray(Object.values(raw)[0])){
+    const migrated={};
+    DEPOTS.forEach(ori=>{ migrated[ori]={}; DEPOTS.filter(d=>d!==ori).forEach(dst=>{ migrated[ori][dst]=raw[ori]||[]; }); });
+    traTemp=migrated;
+  } else { traTemp=raw; }
   const content=document.getElementById('transportes-content');
   content.innerHTML=`
     <div class="card" style="margin-bottom:14px">
@@ -2050,32 +2062,40 @@ function renderTransportesView(){
 }
 
 function buildTraGrid(){
-  document.getElementById('tra-grid').innerHTML = DEPOTS.map(dep => {
-    const checks = ALL_TRANSPORTES.map(t => {
-      const checked = (traTemp[dep]||[]).includes(t) ? 'checked' : '';
-      const uid = 'trc_' + dep.replace(/\s/g,'_') + '_' + t.replace(/\s/g,'_');
-      return `<div class="tra-check">
-        <input type="checkbox" id="${uid}" data-dep="${dep}" data-tra="${t}" ${checked}/>
-        <label for="${uid}">${t}</label>
-      </div>`;
-    }).join('');
-    return `<div class="tra-depot-card">
-      <div class="tra-depot-title">🏭 ${dep}</div>
-      ${checks}
+  // Grid: para cada origen, mostrar destinos con checkboxes de transporte
+  const html = DEPOTS.map(ori => {
+    const dests = DEPOTS.filter(d=>d!==ori);
+    return `<div class="tra-depot-card" style="grid-column:1/-1">
+      <div class="tra-depot-title">📤 Origen: ${ori}</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-top:8px">
+        ${dests.map(dst=>{
+          const lista = ((traTemp[ori]||{})[dst]||[]);
+          const checks = ALL_TRANSPORTES.map(t=>{
+            const uid='trc_'+ori.replace(/\s/g,'_')+'_'+dst.replace(/\s/g,'_')+'_'+t.replace(/\s/g,'_');
+            const checked=lista.includes(t)?'checked':'';
+            return `<div class="tra-check"><input type="checkbox" id="${uid}" data-ori="${ori}" data-dst="${dst}" data-tra="${t}" ${checked}/><label for="${uid}">${t}</label></div>`;
+          }).join('');
+          return `<div style="background:#f8fafd;border:1px solid #d0d9ec;border-radius:6px;padding:10px">
+            <div style="font-size:.72rem;font-weight:700;color:#1a3c78;margin-bottom:6px">→ ${dst}</div>
+            ${checks}
+          </div>`;
+        }).join('')}
+      </div>
     </div>`;
   }).join('');
-  // Actualizar traTemp en tiempo real al cambiar checks
+  document.getElementById('tra-grid').innerHTML = html;
   document.querySelectorAll('#tra-grid input[type=checkbox]').forEach(cb => {
     cb.addEventListener('change', syncTraTemp);
   });
 }
 
 function syncTraTemp(){
-  DEPOTS.forEach(dep => {
-    const key = dep.replace(/\s/g,'_');
-    traTemp[dep] = [...document.querySelectorAll(`#tra-grid input[data-dep="${dep}"]`)]
-      .filter(c => c.checked)
-      .map(c => c.dataset.tra);
+  DEPOTS.forEach(ori => {
+    if(!traTemp[ori]) traTemp[ori]={};
+    DEPOTS.filter(d=>d!==ori).forEach(dst=>{
+      traTemp[ori][dst]=[...document.querySelectorAll(`#tra-grid input[data-ori="${ori}"][data-dst="${dst}"]`)]
+        .filter(c=>c.checked).map(c=>c.dataset.tra);
+    });
   });
 }
 
@@ -2093,7 +2113,7 @@ function addTransporte(){
 
 function saveTransportesView(){
   syncTraTemp();
-  DEPOTS.forEach(dep => { depoTransportes[dep] = traTemp[dep] || []; });
+  DEPOTS.forEach(ori => { depoTransportes[ori] = traTemp[ori] || {}; });
   localStorage.setItem('dl_transportes', JSON.stringify(depoTransportes));
   toast('✅ Transportes guardados');
   gasSend('updateTransportes', { transportes:{ lista:ALL_TRANSPORTES, depots:depoTransportes } });
