@@ -416,17 +416,17 @@ tr.row-warn{background:rgba(217,119,6,.04)}
       </div>
       <!-- Historial -->
       <div class="env-section" id="sec-historial">
-        <div class="env-sec-hd" style="cursor:pointer" onclick="toggleHistorial()">
+        <div class="env-sec-hd" id="hist-hd" style="cursor:pointer;border-bottom:1px solid var(--border);border-radius:var(--radius)" onclick="toggleHistorial()">
           <span class="env-sec-icon">✅</span>
           <span class="env-sec-title" id="sec-hist-title">Historial</span>
           <span class="env-sec-badge" id="sec-hist-badge"></span>
-          <span id="hist-toggle-icon" style="margin-left:auto;font-size:.85rem;color:var(--text3)">▼</span>
+          <span id="hist-toggle-icon" style="margin-left:auto;font-size:.85rem;color:var(--text3)">▶</span>
         </div>
-        <div id="hist-body">
-          <div class="tw"><table>
+        <div id="hist-body" style="display:none">
+          <div class="card" style="padding:0;overflow:hidden;border-radius:0 0 var(--radius) var(--radius)"><div class="tw"><table>
             <thead><tr><th>Salida</th><th>Llegada</th><th>Origen</th><th>Destino</th><th>Remito</th><th>Tipo</th><th>Bulto</th><th>Transporte</th><th>Notas envío</th><th>Notas recepción</th><th id="th-acciones2" style="width:120px"></th></tr></thead>
             <tbody id="tb-historial"></tbody>
-          </table></div>
+          </table></div></div>
         </div>
       </div>
     </div>
@@ -1587,6 +1587,8 @@ function toggleHistorial(){
   const open=body.style.display!=='none';
   body.style.display=open?'none':'block';
   document.getElementById('hist-toggle-icon').textContent=open?'▶':'▼';
+  const hd=document.getElementById('hist-hd');
+  if(hd){ hd.style.borderBottom=open?'1px solid var(--border)':'none'; hd.style.borderRadius=open?'var(--radius)':'var(--radius) var(--radius) 0 0'; }
 }
 
 // ═══════════════════════════════════════════
