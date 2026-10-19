@@ -378,6 +378,18 @@ tr.row-warn{background:rgba(217,119,6,.04)}
           <button onclick="document.getElementById('flt-desde').value='';document.getElementById('flt-hacia').value='';renderEnvios()" style="font-size:.73rem;padding:6px 11px;border-radius:8px;border:1px solid var(--border);background:var(--surface);cursor:pointer;color:var(--text3)">✕</button>
         </div>
       </div>
+      <!-- Preparados (sistema-remitos) — pendientes de despacho físico -->
+      <div class="env-section" id="sec-preparados" style="display:none">
+        <div class="env-sec-hd" style="background:rgba(245,158,11,0.08);border-radius:8px">
+          <span class="env-sec-icon">🟡</span>
+          <span class="env-sec-title" id="sec-prep-title">Preparados — pendientes de despacho</span>
+          <span class="env-sec-badge" id="sec-prep-badge"></span>
+        </div>
+        <div class="card" style="padding:0;overflow:hidden;border:1.5px solid rgba(245,158,11,0.35)"><div class="tw"><table>
+          <thead><tr><th>Cargado</th><th>Origen</th><th>Destino</th><th>Remito</th><th>Tipo</th><th>Bulto</th><th>Transporte</th><th>Notas</th><th id="th-acciones-prep" style="width:130px"></th></tr></thead>
+          <tbody id="tb-preparados"></tbody>
+        </table></div></div>
+      </div>
       <!-- Por recibir (sucursal) / Todos los pendientes (admin+readonly) -->
       <div class="env-section" id="sec-por-recibir">
         <div class="env-sec-hd">
@@ -581,7 +593,7 @@ tr.row-warn{background:rgba(217,119,6,.04)}
 // ═══════════════════════════════════════════
 // CONSTANTES
 // ═══════════════════════════════════════════
-const APP_VERSION = '20260925.1552'; // ← generado automáticamente por Claude al crear el archivo (YYYYMMDD.HHMM)
+const APP_VERSION = '20261019.1200'; // ← generado automáticamente por Claude al crear el archivo (YYYYMMDD.HHMM)
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbwAhNnv4KL8J36WQ8wzqXWtXqFhTTJFuweFY2oMtdJVmNoZ_AI3DFGt5MQU8ioH7UYF/exec';
 const DEPOTS  = ['Pico','MDP','Bs As','Rosario'];
 const ROUTE_DEFS = [
@@ -1158,7 +1170,7 @@ function startApp(){
   document.getElementById('sb-role').textContent = u.role==='admin'?'Administrador':u.role==='sucursal'?'Depósito':'Solo lectura';
   const nav = NAV_ITEMS[u.role]||NAV_ITEMS.readonly;
   document.getElementById('sidebar-nav').innerHTML = nav.map(item=>
-    `<div class="nav-item" id="nav-${item.id}" onclick="show('${item.id}')">${item.icon} ${item.label}${item.id==='recepcion'?'<span class="nav-badge" id="nb-recv" style="display:none">0</span>':''}</div>`
+    `<div class="nav-item" id="nav-${item.id}" onclick="show('${item.id}')">${item.icon} ${item.label}${item.id==='recepcion'?'<span class="nav-badge" id="nb-recv" style="display:none">0</span>':''}${item.id==='envios'?'<span class="nav-badge" id="nb-prep" style="display:none;background:#f59e0b">0</span>':''}</div>`
   ).join('');
   rebuildEnvios();
   show('dashboard');
@@ -1310,11 +1322,17 @@ function calcStatus(e){
 }
 function updBadge(){
   const nb=document.getElementById('nb-recv');
-  if(!nb) return;
+  const nbPrep=document.getElementById('nb-prep');
   const u=currentUser;
-  const depot=u.role==='sucursal'?u.depot:null;
-  const count=envios.filter(e=>e.estado==='pendiente'&&(!depot||e.destino===depot)).length;
-  nb.textContent=count; nb.style.display=count?'':'none';
+  const depot=u?.role==='sucursal'?u.depot:null;
+  if(nb){
+    const count=envios.filter(e=>e.estado==='pendiente'&&(!depot||e.destino===depot)).length;
+    nb.textContent=count; nb.style.display=count?'':'none';
+  }
+  if(nbPrep){
+    const countPrep=envios.filter(e=>e.estado==='preparado'&&(!depot||e.origen===depot||e.destino===depot)).length;
+    nbPrep.textContent=countPrep; nbPrep.style.display=countPrep?'':'none';
+  }
 }
 
 // ═══════════════════════════════════════════
@@ -1455,6 +1473,7 @@ function renderEnvios(){
   let base=[...envios];
   if(isSuc) base=base.filter(e=>e.origen===depot||e.destino===depot);
   else { if(desde) base=base.filter(e=>e.origen===desde); if(hacia) base=base.filter(e=>e.destino===hacia); }
+  const preparados=base.filter(e=>e.estado==='preparado').sort((a,b)=>(a.fechaCarga||a.creadoEn||'').localeCompare(b.fechaCarga||b.creadoEn||''));
   const pendientes=base.filter(e=>e.estado==='pendiente').sort((a,b)=>{
     const sa=calcStatusCached(a),sb=calcStatusCached(b);
     const oa=STATUS_ORDER[sa.status],ob=STATUS_ORDER[sb.status];
@@ -1462,6 +1481,30 @@ function renderEnvios(){
     return sb.hrs-sa.hrs;
   });
   const recibidos=base.filter(e=>e.estado==='recibido').sort((a,b)=>(b.fechaLlegada||'').localeCompare(a.fechaLlegada||''));
+
+  // ── Sección PREPARADOS ──────────────────────────────────
+  const secPrep=document.getElementById('sec-preparados');
+  const canDespachar=(u.role==='admin'||u.role==='sucursal');
+  secPrep.style.display=preparados.length?'':'none';
+  if(preparados.length){
+    document.getElementById('sec-prep-title').textContent=`🟡 Preparados — ${preparados.length} pendiente${preparados.length>1?'s':''} de despacho`;
+    const prepBadge=document.getElementById('sec-prep-badge');
+    prepBadge.textContent=`${preparados.length} envío${preparados.length>1?'s':''}`;
+    prepBadge.className='env-sec-badge warn';
+    document.getElementById('th-acciones-prep').style.display=canDespachar?'':'none';
+    const esSistemaP=(e)=>e.creadoPor==='sistema-remitos';
+    const badgeSistemaP=`<span class="badge-sistema" title="Cargado automáticamente por el sistema de remitos">🤖 Auto</span>`;
+    document.getElementById('tb-preparados').innerHTML=preparados.map(e=>{
+      const notaP=e.obs?`<td class="nota-cell" title="${e.obs}">${e.obs}</td>`:'<td>—</td>';
+      const modIcon={'Cajón':'📦','Pallet':'🟫','Bulto':'🎁'};
+      const modColor={'Cajón':'#dbeafe,#1e40af','Pallet':'#fef9c3,#854d0e','Bulto':'#dcfce7,#166534'};
+      const modBadgeP=(mod,cant)=>{const [bg,co]=(modColor[mod]||'#f1f5f9,#475569').split(',');return mod?`<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:6px;font-size:.72rem;font-weight:700;background:${bg};color:${co}">${modIcon[mod]||'📫'} ${mod} ×${normCant(cant)}</span>`:'<span style="color:var(--text3)">—</span>';};
+      const tipoP=(t)=>t?`<span class="chip" style="background:#ede9fe;color:#6d28d9">${t}</span>`:'<span style="color:var(--text3)">—</span>';
+      const remitoP=`<td class="mono" style="color:var(--blue-md);font-weight:600">${esSistemaP(e)?badgeSistemaP+' ':''}<span>${e.remito}</span></td>`;
+      const cargadoEn=e.fechaCarga||e.creadoEn||e.fecha;
+      return `<tr style="background:rgba(245,158,11,0.04)"><td style="font-size:.78rem;color:#92400e">${fmtDT(cargadoEn)}</td><td><span class="chip">${e.origen}</span></td><td><span class="chip">${e.destino}</span></td>${remitoP}<td>${tipoP(e.tipo)}</td><td>${modBadgeP(e.modalidad,e.cantidad)}</td><td>${e.transporte||'—'}</td>${notaP}<td>${canDespachar?`<button class="btn bsm" style="background:#1a3c78;color:#fff;border:none;padding:5px 12px;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer" onclick="despacharEnvio('${e.id}')">🚚 Despachar</button>`:''}</td></tr>`;
+    }).join('');
+  }
 
   // Sección por recibir:
   // - Sucursal: solo los que van hacia su depósito
@@ -2009,6 +2052,22 @@ function revertirRecepcion(id){
   logCambio(id, 'REVERSIÓN', 'Vuelto a pendiente por ' + currentUser.id);
   gasSend('revertirRecepcion', { id });
   renderEnvios();
+}
+
+// ── Despachar envío preparado → pendiente con fecha real ──
+function despacharEnvio(id){
+  dlConfirm('Despachar envío','¿Confirmar despacho? Se registrará la hora actual como fecha de salida.',()=>{
+    const fechaDespacho = new Date().toISOString();
+    const upd = { estado:'pendiente', fecha: fechaDespacho };
+    const idx = extras.findIndex(x=>x.id===id);
+    if(idx>=0){ Object.assign(extras[idx], upd); }
+    else { changes[id]=Object.assign({},changes[id]||{},upd); }
+    saveState(); rebuildEnvios(); updBadge();
+    toast('🚚 Envío despachado — hora registrada');
+    logCambio(id, 'DESPACHO', 'Despachado por ' + currentUser.id);
+    gasSend('despacharEnvio', { id });
+    renderEnvios();
+  });
 }
 
 function delEnvio(id){
