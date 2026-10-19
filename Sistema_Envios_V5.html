@@ -2058,16 +2058,20 @@ function revertirRecepcion(id){
 
 // ── Despachar envío preparado → pendiente con fecha real ──
 function despacharEnvio(id){
-  dlConfirm('Despachar envío','¿Confirmar despacho? Se registrará la hora actual como fecha de salida.',()=>{
+  const msg=`Se registrará la hora actual como fecha de salida.<textarea id="desp-obs" rows="3" maxlength="200" placeholder="Comentario (opcional): chofer, patente, observaciones..." style="width:100%;margin-top:10px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:.85rem;resize:vertical;box-sizing:border-box"></textarea>`;
+  dlConfirm('Despachar envío',msg,()=>{
+    const comentario=(document.getElementById('desp-obs')?.value||'').trim();
     const fechaDespacho = new Date().toISOString();
     const upd = { estado:'pendiente', fecha: fechaDespacho };
     const idx = extras.findIndex(x=>x.id===id);
+    const cur = idx>=0 ? extras[idx] : null;
+    if(comentario){ upd.obs = (cur&&cur.obs ? cur.obs+' · ' : '') + 'Despacho: ' + comentario; }
     if(idx>=0){ Object.assign(extras[idx], upd); }
     else { changes[id]=Object.assign({},changes[id]||{},upd); }
     saveState(); rebuildEnvios(); updBadge();
     toast('🚚 Envío despachado — hora registrada');
-    logCambio(id, 'DESPACHO', 'Despachado por ' + currentUser.id);
-    gasSend('despacharEnvio', { id });
+    logCambio(id, 'DESPACHO', 'Despachado por ' + currentUser.id + (comentario?' — '+comentario:''));
+    gasSend('despacharEnvio', { id, comentario });
     renderEnvios();
   });
 }
