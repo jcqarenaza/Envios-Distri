@@ -1487,7 +1487,7 @@ function renderEnvios(){
   const canDespachar=(u.role==='admin'||u.role==='sucursal');
   secPrep.style.display=preparados.length?'':'none';
   if(preparados.length){
-    document.getElementById('sec-prep-title').textContent=`🟡 Preparados — ${preparados.length} pendiente${preparados.length>1?'s':''} de despacho`;
+    document.getElementById('sec-prep-title').textContent=`Preparados — ${preparados.length} pendiente${preparados.length>1?'s':''} de despacho`;
     const prepBadge=document.getElementById('sec-prep-badge');
     prepBadge.textContent=`${preparados.length} envío${preparados.length>1?'s':''}`;
     prepBadge.className='env-sec-badge warn';
@@ -1512,10 +1512,10 @@ function renderEnvios(){
   let recvPendAll;
   if(isSuc){
     recvPendAll=pendientes.filter(e=>e.destino===depot);
-    document.getElementById('sec-recv-title').textContent=`📥 Por recibir en ${depot}`;
+    document.getElementById('sec-recv-title').textContent=`Por recibir en ${depot}`;
   } else {
     recvPendAll=pendientes; // todos los pendientes en una sola vista
-    document.getElementById('sec-recv-title').textContent=`📦 Todos los pendientes${desde||hacia?' · filtrado':''}`;
+    document.getElementById('sec-recv-title').textContent=`Todos los pendientes${desde||hacia?' · filtrado':''}`;
   }
   const recvCount=recvPendAll.length, recvA=recvPendAll.filter(e=>calcStatusCached(e).status==='alert').length, recvW=recvPendAll.filter(e=>calcStatusCached(e).status==='warn').length;
   const recvBadge=document.getElementById('sec-recv-badge');
@@ -1545,7 +1545,7 @@ function renderEnvios(){
   if(!isSuc){ secDesp.style.display='none'; } else { secDesp.style.display=''; }
   const despPend=isSuc?pendientes.filter(e=>e.origen===depot):[];
   const despCount=despPend.length, despA=despPend.filter(e=>calcStatusCached(e).status==='alert').length, despW=despPend.filter(e=>calcStatusCached(e).status==='warn').length;
-  document.getElementById('sec-desp-title').textContent=`🚚 Despachados desde ${depot}`;
+  document.getElementById('sec-desp-title').textContent=`Despachados desde ${depot}`;
   const despBadge=document.getElementById('sec-desp-badge');
   despBadge.textContent=despCount?`${despCount} envío${despCount>1?'s':''}`:' Sin pendientes';
   despBadge.className='env-sec-badge '+(despA?'alert':despW?'warn':despCount?'ok':'');
