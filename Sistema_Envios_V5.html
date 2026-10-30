@@ -2451,11 +2451,26 @@ function renderReporte(){
       if(e.fechaLlegada) porRutaFilt[key].hrs.push(weekdayHours(effectiveStart(e.fecha),new Date(e.fechaLlegada)));
     }
   });
-  const rutaData = Object.values(porRutaFilt).map(r=>{
-    const avg = r.hrs.length ? r.hrs.reduce((a,b)=>a+b,0)/r.hrs.length : null;
-    const pct = r.total>0 ? Math.round(r.recibidos/r.total*100) : 0;
-    return {...r, avg, pct};
+  const _avgOf=(h)=>h.length?h.reduce((x,y)=>x+y,0)/h.length:null;
+  const _pairLabel=(o,d)=>{
+    const def=ROUTE_DEFS.find(r=>(r.o===o&&r.d===d)||(r.o===d&&r.d===o));
+    return def?`${def.o} ↔ ${def.d}`:[o,d].sort().join(' ↔ ');
+  };
+  const porPar = {};
+  Object.entries(porRutaFilt).forEach(([k,r])=>{
+    const [o,d]=k.split(' → ').map(x=>x.trim());
+    const pk=[o,d].sort().join('|');
+    if(!porPar[pk]) porPar[pk]={key:pk,label:_pairLabel(o,d),ref:[o,d],total:0,recibidos:0,hrs:[],dirs:[]};
+    const g=porPar[pk];
+    g.total+=r.total; g.recibidos+=r.recibidos; g.hrs.push(...r.hrs);
+    g.dirs.push({label:k,ori:o,dst:d,total:r.total,recibidos:r.recibidos,hrs:r.hrs,avg:_avgOf(r.hrs),pct:r.total>0?Math.round(r.recibidos/r.total*100):0});
   });
+  const rutaData = Object.values(porPar).map(g=>({
+    ...g, avg:_avgOf(g.hrs), pct:g.total>0?Math.round(g.recibidos/g.total*100):0
+  }));
+  window._rutaOpen = window._rutaOpen || {};
+  const toggleRutaPar = (pk)=>{ window._rutaOpen[pk]=!window._rutaOpen[pk]; renderReporte(); };
+  window.toggleRutaPar = toggleRutaPar;
 
   // Ordenar rutas — estado guardado en window para persistir entre renders
   window._rutaSort = window._rutaSort || {col:'avg', dir:1};
@@ -2485,39 +2500,45 @@ function renderReporte(){
     return `style="cursor:pointer;user-select:none;white-space:nowrap${active?';color:#f5a623':''}" onclick="sortRutas('${col}')"`;
   };
 
+  // color/diferencia vs límite según la ruta (umbral por par; es simétrico)
+  const _avgInfo=(avg,o,d)=>{
+    if(avg===null) return {color:'var(--text3)',diff:''};
+    const [nL,aL]=thresh(o,d);
+    const dif=avg-nL;
+    if(avg>=aL) return {color:'var(--alert)',diff:`<span style="font-size:.68rem;color:var(--alert);font-weight:600"> +${fmtH(Math.abs(dif))} vs límite</span>`};
+    if(avg>=nL) return {color:'var(--warn)',diff:`<span style="font-size:.68rem;color:var(--warn);font-weight:600"> +${fmtH(Math.abs(dif))} vs límite</span>`};
+    return {color:'var(--ok)',diff:`<span style="font-size:.68rem;color:var(--ok);font-weight:600"> -${fmtH(Math.abs(dif))} bajo límite</span>`};
+  };
+
   const rutaRows = rutasSorted.map(r=>{
     const avgStr = r.avg!==null ? fmtH(r.avg) : '—';
-    const isMejor = mejorRuta&&r.label===mejorRuta.label;
-    const isPeor  = peorRuta&&r.label===peorRuta.label;
+    const isMejor = mejorRuta&&r.key===mejorRuta.key;
+    const isPeor  = peorRuta&&r.key===peorRuta.key;
     const badge = isMejor?'<span style="background:#dcfce7;color:#16a34a;padding:1px 6px;border-radius:99px;font-size:.65rem;font-weight:700;margin-left:4px">✓ más rápida</span>'
                 :isPeor ?'<span style="background:#fee2e2;color:#dc2626;padding:1px 6px;border-radius:99px;font-size:.65rem;font-weight:700;margin-left:4px">↓ más lenta</span>':'';
+    const open = !!window._rutaOpen[r.key];
+    const inf = _avgInfo(r.avg, r.ref[0], r.ref[1]);
 
-    // Obtener umbral normal y alerta para esa ruta
-    let avgColor = 'var(--text3)', diffStr = '';
-    if(r.avg !== null){
-      // Extraer origen/destino del label "X → Y"
-      const partes = r.label.split(' → ');
-      const [nL, aL] = partes.length===2 ? thresh(partes[0].trim(), partes[1].trim()) : [48,72];
-      const diff = r.avg - nL;
-      if(r.avg >= aL){
-        avgColor = 'var(--alert)';
-        diffStr = `<span style="font-size:.68rem;color:var(--alert);font-weight:600"> +${fmtH(Math.abs(diff))} vs límite</span>`;
-      } else if(r.avg >= nL){
-        avgColor = 'var(--warn)';
-        diffStr = `<span style="font-size:.68rem;color:var(--warn);font-weight:600"> +${fmtH(Math.abs(diff))} vs límite</span>`;
-      } else {
-        avgColor = 'var(--ok)';
-        diffStr = `<span style="font-size:.68rem;color:var(--ok);font-weight:600"> -${fmtH(Math.abs(diff))} bajo límite</span>`;
-      }
-    }
-
-    return `<tr>
-      <td style="font-weight:600">${r.label}${badge}</td>
+    const main = `<tr style="cursor:pointer;user-select:none${open?';background:rgba(26,60,120,0.05)':''}" ondblclick="toggleRutaPar('${r.key}')" title="Doble clic para ver el desglose por sentido">
+      <td style="font-weight:600"><span style="display:inline-block;width:14px;color:var(--text3);font-size:.7rem">${open?'▼':'▶'}</span>${r.label}${badge}</td>
       <td style="text-align:center">${r.total}</td>
       <td style="text-align:center">${r.recibidos}</td>
       <td style="text-align:center;font-weight:600;color:var(--text3)">${r.pct}%</td>
-      <td style="text-align:center;font-weight:700;color:${avgColor}">${avgStr}${diffStr}</td>
+      <td style="text-align:center;font-weight:700;color:${inf.color}">${avgStr}${inf.diff}</td>
     </tr>`;
+
+    if(!open) return main;
+    const sub = [...r.dirs].sort((x,y)=>y.total-x.total).map(dd=>{
+      const di=_avgInfo(dd.avg, dd.ori, dd.dst);
+      return `<tr style="background:var(--surface2)">
+        <td style="padding-left:34px;color:var(--text2);font-size:.8rem">${dd.ori} → ${dd.dst}</td>
+        <td style="text-align:center;font-size:.8rem">${dd.total}</td>
+        <td style="text-align:center;font-size:.8rem">${dd.recibidos}</td>
+        <td style="text-align:center;font-size:.8rem;color:var(--text3)">${dd.pct}%</td>
+        <td style="text-align:center;font-weight:600;font-size:.8rem;color:${di.color}">${dd.avg!==null?fmtH(dd.avg):'—'}${di.diff}</td>
+      </tr>`;
+    }).join('');
+    return main+sub;
   }).join('');
 
   const rutaArrow = (col)=>RS.col===col?(RS.dir===1?'▲':'▼'):'⇅';
