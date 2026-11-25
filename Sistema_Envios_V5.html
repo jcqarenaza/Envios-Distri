@@ -2979,7 +2979,7 @@ function renderTV(){
           : '<div style="color:#8791A3;font-size:.9rem;padding:10px 0">Sin recepciones registradas</div>'}
       </div>`;
 
-    return `<section style="border:1px solid #E8ECF3;border-radius:28px;background:#fff;box-shadow:0 8px 30px rgba(31,42,68,.05);overflow:hidden;align-self:start">
+    return `<section style="border:1px solid #E8ECF3;border-radius:28px;background:#fff;box-shadow:0 8px 30px rgba(31,42,68,.05);overflow:hidden;">
       <div style="padding:20px 26px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
         <span style="font-family:'Outfit',sans-serif;font-size:1.7rem;font-weight:600">${dep}</span>
         ${ac?`<span class="tv-chip" style="background:#FFD6DD;color:#C23B52;font-size:.85rem">${ac} alerta${ac>1?'s':''}</span>`:''}
@@ -2990,7 +2990,7 @@ function renderTV(){
     </section>`;
   }).join('');
 
-  document.getElementById('tv-content').innerHTML=`<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(640px,1fr));gap:22px">${depotCards}</div>`;
+  document.getElementById('tv-content').innerHTML=`<div style="display:flex;flex-direction:column;gap:22px">${depotCards}</div>`;
 }
 
 // ═══════════════════════════════════════════
