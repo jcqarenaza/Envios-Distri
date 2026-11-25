@@ -243,11 +243,11 @@ tr.row-warn{background:rgba(217,119,6,.04)}
 .rpt-period{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
 .rpt-period select,.rpt-period input{padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:.8rem;font-family:inherit;outline:none;background:var(--surface)}
 .rpt-period select:focus,.rpt-period input:focus{border-color:var(--blue-md)}
-#tv-overlay { color:#fff; }
-#tv-overlay table { color:#fff; }
-#tv-overlay td, #tv-overlay th { color:#fff; }
-#tv-overlay ::selection { background:rgba(255,255,255,.08); color:#fff; }
-#tv-overlay ::-moz-selection { background:rgba(255,255,255,.08); color:#fff; }
+#tv-overlay{color:#1F2A44}
+#tv-overlay ::selection{background:transparent}
+.tv-chip{display:inline-block;border-radius:999px;padding:4px 14px;font-weight:600;white-space:nowrap}
+.tv-row{display:grid;grid-template-columns:120px 110px 1fr 150px 140px 160px;gap:12px;align-items:center;padding:13px 26px;border-top:1px solid #E8ECF3;font-size:1rem}
+.tv-th{background:#F7F9FC;border-top:none;font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;font-weight:700;color:#8791A3;padding:10px 26px}
 @media(max-width:768px){.sidebar{display:none}.main{padding:14px}.fg{grid-template-columns:1fr}}
 
 /* ═══ REDISEÑO PASTEL (opción A) ═══ */
@@ -563,11 +563,6 @@ tr.row-warn{background:rgba(138,106,10,.05)}
     </div>
 
     <!-- SISTEMA (admin) -->
-    <div id="view-sistema" class="view">
-      <div class="ph"><div class="ph-left"><div class="pt">⚙️ Sistema</div><div class="ps">Control de versiones y configuración</div></div></div>
-      <div id="sistema-content"></div>
-    </div>
-
     <!-- REPORTE -->
     <div id="view-reporte" class="view">
       <div class="ph">
@@ -601,19 +596,29 @@ tr.row-warn{background:rgba(138,106,10,.05)}
 
   </div><!-- /main -->
 
-  <!-- MODO TV (pantalla completa oscura) -->
-  <div id="tv-overlay" style="display:none;position:fixed;inset:0;background:#0f172a;z-index:9000;color:#fff">
+  <!-- MODO TV (pantalla completa, fondo blanco pastel) -->
+  <div id="tv-overlay" style="display:none;position:fixed;inset:0;background:#fff;z-index:9000;color:#1F2A44;font-family:'Figtree',sans-serif">
     <!-- Capa bloqueadora: captura todo el mouse, impide selección -->
     <div style="position:absolute;inset:0;z-index:9001" onmousedown="return false" onselectstart="return false" oncontextmenu="return false"></div>
     <!-- Contenido por encima de la capa bloqueadora -->
-    <div style="position:relative;z-index:9002;padding:24px;height:100%;overflow:auto">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
-        <div style="color:#3F6FD8;font-size:1.4rem;font-weight:800">🚚 DistriLogis — Monitor en tiempo real</div>
-        <div style="display:flex;gap:12px;align-items:center">
-          <span id="tv-clock" style="color:rgba(255,255,255,.6);font-size:.9rem;font-family:'JetBrains Mono',monospace"></span>
-          <button onclick="closeTVMode()" style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:#fff;padding:8px 16px;border-radius:8px;cursor:pointer;font-family:inherit;font-size:.8rem;position:relative;z-index:9003">✕ Salir</button>
+    <div style="position:relative;z-index:9002;padding:28px 44px 36px;height:100%;overflow:auto;box-sizing:border-box">
+      <div style="display:flex;flex-wrap:wrap;gap:20px;justify-content:space-between;align-items:center;margin-bottom:24px">
+        <div style="display:flex;align-items:center;gap:14px">
+          <div style="width:52px;height:52px;border-radius:18px;background:#D6E6FF;display:flex;align-items:center;justify-content:center"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#1a3c78" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20 12 4l8 16z"/></svg></div>
+          <div>
+            <div style="font-family:'Outfit',sans-serif;font-weight:700;font-size:1.7rem;color:#1a3c78;letter-spacing:.02em;line-height:1.1">DISTRISUPER</div>
+            <div style="font-size:.95rem;color:#8791A3">Monitor de envíos en tiempo real</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:22px;align-items:center">
+          <div style="text-align:right">
+            <div id="tv-clock" style="font-family:'JetBrains Mono',monospace;font-weight:600;font-size:2.4rem;line-height:1;color:#1F2A44"></div>
+            <div id="tv-date" style="font-size:.95rem;color:#5A6478;margin-top:4px"></div>
+          </div>
+          <button id="tv-salir" onclick="closeTVMode()" style="background:#fff;border:1px solid #E8ECF3;color:#5A6478;padding:10px 20px;border-radius:999px;cursor:pointer;font-family:inherit;font-size:.9rem;font-weight:600;position:relative;z-index:9003">Salir</button>
         </div>
       </div>
+      <div id="tv-kpis" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-bottom:24px"></div>
       <div id="tv-content"></div>
     </div>
   </div>
@@ -999,11 +1004,11 @@ const USERS_META = {
   telev:        { role:'readonly', depot:null,      label:'Telev',         color:'#475569' },
 };
 
-const NAV_ICONS = {"dashboard": "<rect x=\"3\" y=\"3\" width=\"7\" height=\"9\" rx=\"2\"/><rect x=\"14\" y=\"3\" width=\"7\" height=\"5\" rx=\"2\"/><rect x=\"14\" y=\"12\" width=\"7\" height=\"9\" rx=\"2\"/><rect x=\"3\" y=\"16\" width=\"7\" height=\"5\" rx=\"2\"/>", "alta": "<path d=\"M12 5v14M5 12h14\"/>", "envios": "<path d=\"M3 7l9-4 9 4-9 4zM3 7v10l9 4 9-4V7\"/>", "recepcion": "<path d=\"M4 13h4l2 3h4l2-3h4M5 5h14l2 8v6H3v-6z\"/>", "rutas": "<circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"M12 7v5l3 2\"/>", "transportes": "<path d=\"M2 6h12v10H2zM14 10h5l3 3v3h-8\"/><circle cx=\"7\" cy=\"18\" r=\"2\"/><circle cx=\"18\" cy=\"18\" r=\"2\"/>", "reporte": "<path d=\"M4 20V10M10 20V4M16 20v-7M22 20H2\"/>", "sistema": "<circle cx=\"12\" cy=\"12\" r=\"3\"/><path d=\"M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2\"/>"};
-const NAV_SECTIONS = {dashboard:'Operación',alta:'Operación',envios:'Operación',recepcion:'Operación',rutas:'Análisis',transportes:'Análisis',reporte:'Análisis',sistema:'Admin'};
+const NAV_ICONS = {"dashboard": "<rect x=\"3\" y=\"3\" width=\"7\" height=\"9\" rx=\"2\"/><rect x=\"14\" y=\"3\" width=\"7\" height=\"5\" rx=\"2\"/><rect x=\"14\" y=\"12\" width=\"7\" height=\"9\" rx=\"2\"/><rect x=\"3\" y=\"16\" width=\"7\" height=\"5\" rx=\"2\"/>", "alta": "<path d=\"M12 5v14M5 12h14\"/>", "envios": "<path d=\"M3 7l9-4 9 4-9 4zM3 7v10l9 4 9-4V7\"/>", "recepcion": "<path d=\"M4 13h4l2 3h4l2-3h4M5 5h14l2 8v6H3v-6z\"/>", "rutas": "<circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"M12 7v5l3 2\"/>", "transportes": "<path d=\"M2 6h12v10H2zM14 10h5l3 3v3h-8\"/><circle cx=\"7\" cy=\"18\" r=\"2\"/><circle cx=\"18\" cy=\"18\" r=\"2\"/>", "reporte": "<path d=\"M4 20V10M10 20V4M16 20v-7M22 20H2\"/>"};
+const NAV_SECTIONS = {dashboard:'Operación',alta:'Operación',envios:'Operación',recepcion:'Operación',rutas:'Análisis',transportes:'Análisis',reporte:'Análisis'};
 const navSvg = id => `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${NAV_ICONS[id]||''}</svg>`;
 const NAV_ITEMS = {
-  admin:    [{id:'dashboard',icon:'📊',label:'Dashboard'},{id:'alta',icon:'➕',label:'Nuevo Envío'},{id:'envios',icon:'📦',label:'Todos los Envíos'},{id:'recepcion',icon:'📥',label:'Recepción'},{id:'rutas',icon:'🗺️',label:'Tiempos por Ruta'},{id:'transportes',icon:'🚛',label:'Transportes'},{id:'reporte',icon:'📈',label:'Reporte'},{id:'sistema',icon:'⚙️',label:'Sistema'}],
+  admin:    [{id:'dashboard',icon:'📊',label:'Dashboard'},{id:'alta',icon:'➕',label:'Nuevo Envío'},{id:'envios',icon:'📦',label:'Todos los Envíos'},{id:'recepcion',icon:'📥',label:'Recepción'},{id:'rutas',icon:'🗺️',label:'Tiempos por Ruta'},{id:'transportes',icon:'🚛',label:'Transportes'},{id:'reporte',icon:'📈',label:'Reporte'}],
   sucursal: [{id:'dashboard',icon:'📊',label:'Dashboard'},{id:'alta',icon:'➕',label:'Nuevo Envío'},{id:'envios',icon:'📦',label:'Todos los Envíos'},{id:'recepcion',icon:'📥',label:'Recepción'},{id:'rutas',icon:'🗺️',label:'Tiempos por Ruta'}],
   readonly: [{id:'dashboard',icon:'📊',label:'Dashboard'},{id:'envios',icon:'📦',label:'Todos los Envíos'},{id:'rutas',icon:'🗺️',label:'Tiempos por Ruta'}],
 };
@@ -1312,7 +1317,6 @@ function show(viewId){
   if(viewId==='recepcion')    renderRecepcion();
   if(viewId==='rutas')        renderRoutes();
   if(viewId==='transportes')  renderTransportesView();
-  if(viewId==='sistema')      renderSistema();
   if(viewId==='reporte')      renderReporte();
 }
 
@@ -2799,101 +2803,6 @@ function renderManualTab(tab){
 }
 
 // ═══════════════════════════════════════════
-// SISTEMA — control de versiones (solo admin)
-// ═══════════════════════════════════════════
-async function renderSistema(){
-  if(currentUser.role !== 'admin') return;
-  const el = document.getElementById('sistema-content');
-  el.innerHTML = `<div class="card" style="max-width:580px">
-    <div style="font-size:.72rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:14px">🔒 Control de versiones</div>
-    <div id="sys-loading" style="color:var(--text3);font-size:.82rem;padding:8px 0">Consultando servidor...</div>
-    <div id="sys-body" style="display:none">
-      <div class="stat-grid" style="margin-bottom:16px">
-        <div class="stat blue"><div class="sl">Este HTML</div><div class="sv" style="font-size:1.2rem;font-family:'JetBrains Mono',monospace" id="sys-current"></div><div class="sd">versión de este archivo</div></div>
-        <div class="stat ok"><div class="sl">Deployada</div><div class="sv" style="font-size:1.2rem;font-family:'JetBrains Mono',monospace" id="sys-deployed"></div><div class="sd">último deploy registrado</div></div>
-        <div class="stat warn"><div class="sl">Mínima requerida</div><div class="sv" style="font-size:1.2rem;font-family:'JetBrains Mono',monospace" id="sys-min"></div><div class="sd">bloquea versiones anteriores</div></div>
-      </div>
-      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:16px">
-        <div style="font-size:.75rem;font-weight:700;color:var(--text2);margin-bottom:8px">📋 Versiones en circulación</div>
-        <div id="sys-history"></div>
-      </div>
-      <div style="background:var(--warn-lt);border:1px solid #fde68a;border-radius:10px;padding:14px">
-        <div style="font-size:.75rem;font-weight:700;color:var(--warn);margin-bottom:6px">⚠️ Cambiar versión mínima requerida</div>
-        <div style="font-size:.75rem;color:#92400e;margin-bottom:10px">Los usuarios con HTML más viejo que este número <strong>no podrán loguearse</strong>.</div>
-        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-          <input type="text" id="sys-new-min" style="width:150px;padding:8px 10px;border:1.5px solid #fde68a;border-radius:8px;font-size:.85rem;font-family:'JetBrains Mono',monospace;outline:none;background:#fff" placeholder="ej: 20260404.1132"/>
-          <button class="btn bs" onclick="saveMinVersion()">💾 Guardar</button>
-          <span id="sys-save-msg" style="font-size:.75rem;color:var(--ok);display:none">✅ Guardado</span>
-        </div>
-      </div>
-    </div>
-    <div id="sys-gas-warning" style="display:none;margin-top:14px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:14px">
-      <div style="font-size:.75rem;font-weight:700;color:#1e40af;margin-bottom:6px">ℹ️ GAS pendiente de actualización</div>
-      <div style="font-size:.75rem;color:#1e40af;line-height:1.6">
-        El servidor todavía corre el GAS V4. Para activar el control de versiones completo,<br>
-        deployá el archivo <code style="background:#dbeafe;padding:1px 5px;border-radius:4px">DistriLogis_V5_GAS.js</code> en Google Apps Script.
-      </div>
-    </div>
-  </div>`;
-
-  // Siempre mostramos la versión local inmediatamente
-  document.getElementById('sys-current').textContent = APP_VERSION;
-
-  // Normaliza versiones que Sheets pudo haber guardado sin punto
-  // (ej: "202604041132" → "20260404.1132")
-  function fmtV(v){
-    const s = String(v||'').trim();
-    if(s.length === 12 && !s.includes('.')) return s.slice(0,8)+'.'+s.slice(8);
-    return s || '—';
-  }
-
-  try {
-    const res = await gasPost('getSystemInfo', {});
-
-    if(res && res.ok && res.data){
-      // GAS V5 activo — mostrar todo
-      const d = res.data;
-      document.getElementById('sys-deployed').textContent = fmtV(d.deployedVersion);
-      document.getElementById('sys-min').textContent      = fmtV(d.minVersion);
-      document.getElementById('sys-new-min').value        = fmtV(d.minVersion) !== '—' ? fmtV(d.minVersion) : APP_VERSION;
-      const hist = (d.versionHistory || '').split(',').map(s=>s.trim()).filter(Boolean);
-      document.getElementById('sys-history').innerHTML = hist.length
-        ? hist.map(v=>`<span style="display:inline-block;padding:2px 8px;background:#e8eaf6;color:#3949ab;border-radius:6px;margin:2px;font-size:.72rem;font-family:'JetBrains Mono',monospace">${v}</span>`).join('')
-        : '<span style="color:var(--text3);font-size:.78rem">Sin historial aún — se registra automáticamente con cada login</span>';
-    } else {
-      // GAS V4 — mostrar info local + aviso de deploy pendiente
-      document.getElementById('sys-deployed').textContent = APP_VERSION + ' (local)';
-      document.getElementById('sys-min').textContent      = '—';
-      document.getElementById('sys-new-min').value        = APP_VERSION;
-      document.getElementById('sys-history').innerHTML    = `<span style="color:var(--text3);font-size:.78rem">Disponible después de deployar GAS V5</span>`;
-      document.getElementById('sys-gas-warning').style.display = 'block';
-    }
-  } catch(e){
-    // Error de red — igual mostramos lo que podemos
-    document.getElementById('sys-deployed').textContent = '—';
-    document.getElementById('sys-min').textContent      = '—';
-    document.getElementById('sys-history').innerHTML    = `<span style="color:var(--text3);font-size:.78rem">Sin conexión al servidor</span>`;
-    console.warn('[renderSistema]', e.message);
-  }
-
-  document.getElementById('sys-loading').style.display = 'none';
-  document.getElementById('sys-body').style.display    = 'block';
-}
-
-async function saveMinVersion(){
-  const val = parseFloat(document.getElementById('sys-new-min').value);
-  if(!val || val < 1){ toast('⚠ Ingresá un número válido'); return; }
-  const msg = document.getElementById('sys-save-msg');
-  msg.style.display = 'none';
-  const res = await gasSend('setMinVersion', { minVersion: String(val) });
-  if(res && res.ok){
-    msg.style.display = 'inline';
-    setTimeout(() => renderSistema(), 800); // refrescar para mostrar nuevo valor
-  }
-}
-
-
-// ═══════════════════════════════════════════
 // HISTORIAL DE CAMBIOS POR ENVÍO
 // ═══════════════════════════════════════════
 // Se guarda en localStorage bajo 'dl_historial_envio_ID'
@@ -2984,14 +2893,18 @@ function fmtEstimado(envio){
 let _tvTimer = null;
 let _tvClockTimer = null;
 
+function _tvTick(){
+  const c=document.getElementById('tv-clock'), d=document.getElementById('tv-date');
+  const n=new Date();
+  if(c) c.textContent = n.toLocaleTimeString('es-AR',{timeZone:TZ,hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+  if(d){ const f=n.toLocaleDateString('es-AR',{timeZone:TZ,weekday:'long',day:'numeric',month:'long'}); d.textContent=f.charAt(0).toUpperCase()+f.slice(1); }
+}
 function openTVMode(){
   document.getElementById('tv-overlay').style.display='block';
   renderTV();
+  _tvTick();
   _tvTimer = setInterval(renderTV, 30000);
-  _tvClockTimer = setInterval(()=>{
-    const el=document.getElementById('tv-clock');
-    if(el) el.textContent = new Date().toLocaleTimeString('es-AR',{timeZone:TZ,hour:'2-digit',minute:'2-digit',second:'2-digit'});
-  }, 1000);
+  _tvClockTimer = setInterval(_tvTick, 1000);
   // Bloquear selección de texto completamente
   const ov = document.getElementById('tv-overlay');
   ov.addEventListener('mousedown', e=>{ if(e.target.id!=='tv-salir') e.preventDefault(); });
@@ -3006,8 +2919,28 @@ function closeTVMode(){
 
 function renderTV(){
   const pending = envios.filter(e=>e.estado==='pendiente');
-  const modIcon={'Cajón':'📦','Pallet':'🟫','Bulto':'🎁'};
-  const COL = 'grid-template-columns:110px 130px 1fr 170px 150px 160px';
+  const ST = {
+    alert:{bg:'#FFD6DD',fg:'#C23B52',lbl:'Alerta'},
+    warn: {bg:'#F7E6B0',fg:'#8A6A0A',lbl:'Demorado'},
+    ok:   {bg:'#CBEFDD',fg:'#1F8A60',lbl:'Normal'}
+  };
+  const allSt = pending.map(e=>calcStatusCached(e).status);
+  const nAlert=allSt.filter(x=>x==='alert').length, nWarn=allSt.filter(x=>x==='warn').length;
+  const hoyAR = nowAR().toLocaleDateString('sv-SE',{timeZone:TZ});
+  const recHoy = envios.filter(e=>e.estado==='recibido'&&e.fechaLlegada&&e.fechaLlegada.slice(0,10)===hoyAR).length;
+  const nPrep = envios.filter(e=>e.estado==='preparado').length;
+
+  const kpi=(lbl,val,c1,fg)=>`<div style="border:1px solid #E8ECF3;border-radius:24px;padding:20px 26px;background:linear-gradient(135deg,${c1},#fff 85%);box-shadow:0 8px 30px rgba(31,42,68,.05)">
+      <div style="font-size:.78rem;letter-spacing:.12em;text-transform:uppercase;font-weight:700;color:${fg}">${lbl}</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:3rem;font-weight:600;line-height:1.1;margin-top:6px;color:#1F2A44">${val}</div></div>`;
+  document.getElementById('tv-kpis').innerHTML =
+    kpi('En tránsito',pending.length,'#D6E6FF','#3F6FD8')+
+    kpi('Recibidos hoy',recHoy,'#CBEFDD','#1F8A60')+
+    kpi('Demorados',nWarn,'#F7E6B0','#8A6A0A')+
+    kpi('Alertas',nAlert,'#FFD6DD','#C23B52')+
+    (nPrep?kpi('Preparados',nPrep,'#DDD5FF','#6B55C9'):'');
+
+  const head = `<div class="tv-row tv-th"><span>Horas</span><span>Origen</span><span>Remito</span><span>Bulto</span><span>Transporte</span><span>Est. llegada</span></div>`;
 
   const depotCards = DEPOTS.map(dep=>{
     const items = pending.filter(e=>e.destino===dep)
@@ -3019,52 +2952,45 @@ function renderTV(){
     const ac=items.filter(e=>calcStatusCached(e).status==='alert').length;
     const wc=items.filter(e=>calcStatusCached(e).status==='warn').length;
 
-    const header = `<div style="display:grid;${COL};gap:8px;padding:10px 14px;background:#1a3c78;border-bottom:2px solid #3F6FD8">
-      <span style="color:#3F6FD8;font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.8px">⏱ Horas</span>
-      <span style="color:#3F6FD8;font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.8px">📍 Origen</span>
-      <span style="color:#3F6FD8;font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.8px">🔖 Remito</span>
-      <span style="color:#3F6FD8;font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.8px">📦 Bulto</span>
-      <span style="color:#3F6FD8;font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.8px">🚚 Transporte</span>
-      <span style="color:#3F6FD8;font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.8px">🕐 Est. llegada</span>
-    </div>`;
-
-    const rows = items.map((e,i)=>{
+    const rows = items.map(e=>{
       const {hrs,status}=calcStatusCached(e);
-      const col=status==='alert'?'#ef4444':status==='warn'?'#3F6FD8':'#4ade80';
-      const bg=i%2===0?'rgba(255,255,255,.04)':'rgba(255,255,255,.02)';
+      const st=ST[status]||ST.ok;
       const est=estimarLlegada(e);
       const estTxt=est?fmtDT(est.estimado.toISOString()):'—';
-      const bulto=e.modalidad?(modIcon[e.modalidad]||'📫')+' '+e.modalidad+' ×'+normCant(e.cantidad):'—';
-      return `<div style="display:grid;${COL};gap:8px;padding:11px 14px;background:${bg};border-bottom:1px solid rgba(255,255,255,.05);align-items:center">
-        <span style="color:${col};font-weight:700;font-size:.95rem;font-family:'JetBrains Mono',monospace">${fmtH(hrs)}</span>
-        <span style="background:rgba(255,255,255,.12);color:#fff;padding:2px 8px;border-radius:6px;font-size:.82rem;display:inline-block">${e.origen}</span>
-        <span style="color:#fff;font-family:'JetBrains Mono',monospace;font-size:.82rem">${e.remito}</span>
-        <span style="color:rgba(255,255,255,.9);font-size:.82rem">${bulto}</span>
-        <span style="color:rgba(255,255,255,.7);font-size:.78rem">${e.transporte||'—'}</span>
-        <span style="color:rgba(255,255,255,.55);font-size:.75rem">${estTxt}</span>
+      const bulto=e.modalidad?`${e.modalidad} ×${normCant(e.cantidad)}`:'—';
+      return `<div class="tv-row">
+        <span><span class="tv-chip" style="background:${st.bg};color:${st.fg};font-family:'JetBrains Mono',monospace;font-size:1.05rem;font-weight:700">${fmtH(hrs)}</span></span>
+        <span><span class="tv-chip" style="background:#E8F0FF;color:#2d55b0;font-size:.9rem">${e.origen}</span></span>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:.95rem;font-weight:500">${e.remito}</span>
+        <span style="color:#5A6478;font-size:.95rem">${bulto}</span>
+        <span style="color:#5A6478;font-size:.9rem">${e.transporte||'—'}</span>
+        <span style="color:#8791A3;font-size:.85rem">${estTxt}</span>
       </div>`;
     }).join('');
 
-    return `<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:12px;overflow:hidden;margin-bottom:16px">
-      <div style="padding:14px 16px;background:#152238;display:flex;align-items:center;gap:10px;border-bottom:1px solid rgba(255,255,255,.08)">
-        <span style="font-size:1.05rem;font-weight:800;color:#fff">🏭 ${dep}</span>
-        ${ac?`<span style="background:#dc2626;color:#fff;padding:2px 10px;border-radius:99px;font-size:.72rem;font-weight:700">🚨 ${ac} alerta${ac>1?'s':''}</span>`:''}
-        ${wc?`<span style="background:#d97706;color:#fff;padding:2px 10px;border-radius:99px;font-size:.72rem;font-weight:700">⚠️ ${wc} demorado${wc>1?'s':''}</span>`:''}
-        <span style="margin-left:auto;color:rgba(255,255,255,.4);font-size:.75rem">${items.length} pendiente${items.length!==1?'s':''}</span>
+    const ultimos = envios.filter(e=>e.estado==='recibido'&&e.destino===dep).sort((a,b)=>(b.fechaLlegada||'').localeCompare(a.fechaLlegada||'')).slice(0,3);
+    const vacio = `<div style="padding:18px 26px 22px;border-top:1px solid #E8ECF3">
+        <span class="tv-chip" style="background:#CBEFDD;color:#1F8A60;font-size:.9rem">Sin pendientes</span>
+        <div style="margin-top:14px;font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;font-weight:700;color:#8791A3">Últimas recepciones</div>
+        ${ultimos.length ? ultimos.map(e=>`<div style="display:flex;gap:16px;align-items:center;padding:9px 0;border-bottom:1px solid #E8ECF3;font-size:.95rem">
+          <span style="color:#1F8A60;font-weight:600;white-space:nowrap">${fmtDT(e.fechaLlegada)}</span>
+          <span class="tv-chip" style="background:#E8F0FF;color:#2d55b0;font-size:.85rem">${e.origen}</span>
+          <span style="font-family:'JetBrains Mono',monospace;color:#5A6478">${e.remito}</span></div>`).join('')
+          : '<div style="color:#8791A3;font-size:.9rem;padding:10px 0">Sin recepciones registradas</div>'}
+      </div>`;
+
+    return `<section style="border:1px solid #E8ECF3;border-radius:28px;background:#fff;box-shadow:0 8px 30px rgba(31,42,68,.05);overflow:hidden;align-self:start">
+      <div style="padding:20px 26px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <span style="font-family:'Outfit',sans-serif;font-size:1.7rem;font-weight:600">${dep}</span>
+        ${ac?`<span class="tv-chip" style="background:#FFD6DD;color:#C23B52;font-size:.85rem">${ac} alerta${ac>1?'s':''}</span>`:''}
+        ${wc?`<span class="tv-chip" style="background:#F7E6B0;color:#8A6A0A;font-size:.85rem">${wc} demorado${wc>1?'s':''}</span>`:''}
+        <span class="tv-chip" style="margin-left:auto;background:#E8F0FF;color:#2d55b0;font-size:.85rem">${items.length} pendiente${items.length!==1?'s':''}</span>
       </div>
-      ${items.length ? header+rows : `<div style="padding:20px 14px">
-        <div style="color:rgba(255,255,255,.4);font-size:.82rem;margin-bottom:10px">✅ Sin pendientes — últimas recepciones</div>
-        ${(()=>{
-          const hoyAR=nowAR().toLocaleDateString('sv-SE',{timeZone:TZ});
-          const ultimos=envios.filter(e=>e.estado==='recibido'&&e.destino===dep).sort((a,b)=>(b.fechaLlegada||'').localeCompare(a.fechaLlegada||'')).slice(0,3);
-          if(!ultimos.length) return '<div style="color:rgba(255,255,255,.3);font-size:.78rem;padding:8px 0">Sin recepciones registradas</div>';
-          return ultimos.map(e=>`<div style="display:flex;gap:12px;align-items:center;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.05)"><span style="color:#4ade80;font-size:.8rem;white-space:nowrap">${fmtDT(e.fechaLlegada)}</span><span style="color:rgba(255,255,255,.7);font-family:'JetBrains Mono',monospace;font-size:.8rem">${e.remito}</span><span style="color:rgba(255,255,255,.5);font-size:.75rem">${e.origen}</span></div>`).join('');
-        })()}
-      </div>`}
-    </div>`;
+      ${items.length ? head+rows : vacio}
+    </section>`;
   }).join('');
 
-  document.getElementById('tv-content').innerHTML=depotCards;
+  document.getElementById('tv-content').innerHTML=`<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(640px,1fr));gap:22px">${depotCards}</div>`;
 }
 
 // ═══════════════════════════════════════════
